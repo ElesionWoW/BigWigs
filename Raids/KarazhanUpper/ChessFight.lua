@@ -3,7 +3,7 @@ local module, L = BigWigs:ModuleDeclaration("King", "Karazhan")
 -- module variables
 module.revision = 30003
 module.enabletrigger = module.translatedName
-module.toggleoptions = { "kingsfury", "kingscursecd", "voidzone", -1, "subservience", "marksubservience", "decursebow", "throttlebow", "charmingpresence", "markmindcontrol", -1, "knightsglory", "bishoptonguesalert", "bishopvolley", "empoweredsb", -1, "printchess", "bosskill" }
+module.toggleoptions = { "kingsfury", "kingscursecd", "voidzone", -1, "subservience", "subserviencecast", "marksubservience", "decursebow", "throttlebow", "charmingpresence", "markmindcontrol", -1, "knightsglory", "bishoptonguesalert", "bishopvolley", "empoweredsb", -1, "printchess", "bosskill" }
 module.zonename = {
 	AceLibrary("AceLocale-2.2"):new("BigWigs")["Tower of Karazhan"],
 	AceLibrary("Babble-Zone-2.2")["Tower of Karazhan"],
@@ -18,6 +18,7 @@ module.defaultDB = {
 	kingscursecd = true,
 	voidzone = true,
 	subservience = true,
+	subserviencecast = playerClass == "SHAMAN",
 	marksubservience = true,
 	decursebow = playerClass == "MAGE" or playerClass == "DRUID",
 	throttlebow = true,
@@ -49,7 +50,11 @@ L:RegisterTranslations("enUS", function()
 
 		subservience_cmd = "subservience",
 		subservience_name = "Dark Subservience Alert",
-		subservience_desc = "Warns when you are afflicted by Dark Subservience",
+		subservience_desc = "Warns when you or others are afflicted by Dark Subservience",
+
+		subserviencecast_cmd = "subserviencecast",
+		subserviencecast_name = "Dark Subservience Casts",
+		subserviencecast_desc = "Shows incoming cast messages for Dark Subservience (for Grounding Totem)",
 
 		marksubservience_cmd = "marksubservience",
 		marksubservience_name = "Mark Subservience Target",
@@ -325,7 +330,7 @@ function module:KingCastEvent(casterGuid, targetGuid, eventType, spellId, castTi
 end
 
 function module:CastEvent(msg)
-	if self.db.profile.subservience and string.find(msg, L["trigger_subservienceFailed"]) and self.queenTarget ~= "" then
+	if string.find(msg, L["trigger_subservienceFailed"]) and self.queenTarget ~= "" then
 		self:Sync(syncName.subservienceFailed .. " " .. self.queenTarget)
 	elseif string.find(msg, L["trigger_kingCastFury"]) then
 		self:Sync(syncName.kingCastFury)
@@ -535,7 +540,7 @@ function module:StartCharmingPresenceTimer()
 end
 
 function module:QueenCastingSubservience(playerName)
-	if not self.db.profile.subservience then
+	if not self.db.profile.subserviencecast then
 		return
 	end
 	self.queenTarget = playerName
@@ -544,7 +549,7 @@ function module:QueenCastingSubservience(playerName)
 end
 
 function module:SubservienceFailed(playerName)
-	if not self.db.profile.subservience then
+	if not self.db.profile.subserviencecast then
 		return
 	end
 

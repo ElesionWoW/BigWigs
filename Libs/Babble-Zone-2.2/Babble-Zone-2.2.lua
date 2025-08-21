@@ -1,6 +1,6 @@
-﻿--[[
+--[[
 Name: Babble-Zone-2.2
-Revision: $Rev: 17779 $
+Revision: $Rev: 17781 $
 Author(s): ckknight (ckknight@gmail.com)
 Website: http://ckknight.wowinterface.com/
 Documentation: http://wiki.wowace.com/index.php/Babble-Zone-2.2
@@ -28,28 +28,51 @@ local BabbleZone = AceLibrary("AceLocale-2.2"):new(MAJOR_VERSION)
 
 BabbleZone:RegisterTranslations("enUS", function()
 	return {
-		["The Black Morass"] = true,
-		["Blackrock Spire"] = true,
-		["Alah'thalas"] = true,
+		
+		-- Turtle WoW
+		
+		["Alah'Thalas"] = true,
 		["Amani'Alor"] = true,
+		["Balor"] = true,
+		["Blackrock Spire"] = true,
+		["Blackstone Island"] = true,
+		["Dragonmaw Retreat"] = true,
 		["Crescent Grove"] = true,
 		["Emerald Sanctum"] = true,
 		["Gillijim's Isle"] = true,
 		["Gilneas City"] = true,
 		["Gilneas"] = true,
+		["GM Island"] = true,
+		["Grim Reaches"] = true,
 		["Hateforge Quarry"] = true,
 		["Icepoint Rock"] = true,
 		["Karazhan Crypt"] = true,
 		["Karazhan"] = true,
 		["Lapidis Isle"] = true,
 		["Lower Karazhan Halls"] = true,
-		["Tower of Karazhan"] = true, -- new twow name
 		["Moomoo Grove"] = true,
+		["Northwind"] = true,
+		["Scarlet Monastery Armory"] = true,
+		["Scarlet Monastery Cathedral"] = true,
+		["Scarlet Monastery Graveyard"] = true,
+		["Scarlet Monastery Library"] = true,
 		["Scarlet Enclave"] = true,
 		["Stormwind Vault"] = true,
+		["Stormwrought Castle"] = true,
+		["Stormwrought Descent"] = true,
+		["Stormwrought Ruins"] = true,
 		["Sunnyglade Valley"] = true,
 		["Tel'Abim"] = true,
+		["Thalassian Highlands"] = true,
+		["The Black Morass"] = true,
+		["The Rock of Desolation"] = true,
+		["The Upper Necropolis"] = true,
+		["Tower of Karazhan"] = true,
 		["Winter Veil Vale"] = true,
+		["???"] = true, --1.17 name for The Rock of Desolation
+		
+		-- Vanilla
+		
 		["Ahn'Qiraj"] = true,
 		["Alterac Mountains"] = true,
 		["Alterac Valley"] = true,

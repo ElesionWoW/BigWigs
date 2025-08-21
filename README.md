@@ -73,8 +73,6 @@ Rupturan, Kruul, Mephistroth are unchanged for now.
 ### Future Ideas:
 * Incantagos - Add bars for every Surge victim that target on click and auto-cancel when it fades or the target dies.
 * Chess - Keep track of major piece health and announce every % below 5.
-* Chess - Display the current magnitude of Queen's Fury.
-* Sanv Tas'dal - Make Overflowing Hatred cast bar accurate.
 
 # BigWigs
 BigWigs is a World of Warcraft AddOn to predict certain AI behaviour to improve the players performance.<br>

@@ -62,7 +62,7 @@ end)
 -- timer and icon variables
 local timer = {
 	phaseShiftedDuration = 25,
-	overflowingHatredCast = 4,
+	overflowingHatredCast = 6,
 	addPhase = 50,
 }
 

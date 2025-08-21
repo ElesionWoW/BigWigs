@@ -3,10 +3,11 @@ local module, L = BigWigs:ModuleDeclaration("Ragnaros", "Molten Core")
 
 module.revision = 30079
 module.enabletrigger = module.translatedName
-module.toggleoptions = {"emerge", "wrathofragnaros", "lava", "adds", "melt", "elementalfire", "bosskill"}
+module.toggleoptions = {"emerge", "wrathofragnaros", "lava", "adds", "melt", "elementalfire", "elementalfiresay", "elementalfiremark", "bosskill"}
 module.wipemobs = {"Son of Flame"}
 module.defaultDB = {
 	adds = false,
+	elementalfiremark = false,
 }
 
 L:RegisterTranslations("enUS", function() return {
@@ -35,6 +36,14 @@ L:RegisterTranslations("enUS", function() return {
 	elementalfire_cmd = "elementalfire",
 	elementalfire_name = "Elemental Fire Alert",
 	elementalfire_desc = "Warn for Elemental Fire",
+	
+	elementalfiresay_cmd = "elementalfiresay",
+	elementalfiresay_name = "Elemental Fire Announce",
+	elementalfiresay_desc = "Announce to /say when you get Elemental Fire",
+	
+	elementalfiremark_cmd = "elementalfiremark",
+	elementalfiremark_name = "Elemental Fire Mark",
+	elementalfiremark_desc = "Mark victims of Elemental Fire (and unmark them once it runs out)",
 	
 
 		--74.137
@@ -78,7 +87,10 @@ L:RegisterTranslations("enUS", function() return {
 	trigger_elementalFireYou = "You are afflicted by Elemental Fire.", --CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE
 	trigger_elementalFireOther = "(.+) is afflicted by Elemental Fire.", --CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE //CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE
 	trigger_elementalFireFade = "Elemental Fire fades from (.+).", --CHAT_MSG_SPELL_AURA_GONE_SELF // CHAT_MSG_SPELL_AURA_GONE_PARTY // CHAT_MSG_SPELL_AURA_GONE_OTHERà
-	bar_elementalFire = " Elemental Fire",
+	bar_elementalFire = " - Elemental Fire",
+	say_elementalFire = "Get away from me - Elemental Fire!",
+	msg_elementalFire = "Elemental Fire on %s - move away from them!",
+	warn_elementalFire = "Damage Aura!",
 } end)
 
 local timer = {
@@ -273,7 +285,9 @@ function module:Event(msg)
 		
 		
 	elseif msg == L["trigger_elementalFireYou"] then
-		self:Sync(syncName.elementalFire .. " " .. UnitName("Player"))
+		local elementalFirePerson = UnitName("Player")
+		self:Sync(syncName.elementalFire .. " " .. elementalFirePerson)
+		self:ElementalFire(elementalFirePerson) -- let's not miss a sync
 	
 	elseif string.find(msg, L["trigger_elementalFireOther"]) then
 		local _,_, elementalFirePerson, _ = string.find(msg, L["trigger_elementalFireOther"])
@@ -298,9 +312,9 @@ function module:BigWigs_RecvSync(sync, rest, nick)
 	elseif sync == syncName.addDead and rest and self.db.profile.adds then
 		self:AddDead(rest)
 		
-	elseif sync == syncName.elementalFire and rest and self.db.profile.elementalfire then
+	elseif sync == syncName.elementalFire and rest and rest ~= UnitName("player") then
 		self:ElementalFire(rest)
-	elseif sync == syncName.elementalFireFade and rest and self.db.profile.elementalfire then
+	elseif sync == syncName.elementalFireFade and rest then
 		self:ElementalFireFade(rest)
 	end
 end
@@ -479,10 +493,39 @@ function module:MeltWeapon(rest)
 	end
 end
 
-function module:ElementalFire(rest)
-	self:Bar(rest..L["bar_elementalFire"], timer.elementalFire, icon.elementalFire, true, color.elementalFire)
+function module:ElementalFire(player)
+	if player == UnitName("player") then
+		if self.db.profile.elementalfire then
+			self:WarningSign(icon.elementalFire, 2, true, L["warn_elementalFire"])
+		end
+		if self.db.profile.elementalfiresay then
+			SendChatMessage(L["say_elementalFire"], "SAY")
+		end
+	end
+	if self.db.profile.elementalfire then
+		self:Bar(player..L["bar_elementalFire"], timer.elementalFire, icon.elementalFire, true, color.elementalFire)
+		self:Message(string.format(L["msg_elementalFire"], player), "Urgent")
+	end
+	if self.db.profile.elementalfiremark then
+		local markToUse = self:GetAvailableRaidMark()
+		if markToUse then
+			self:SetRaidTargetForPlayer(player, markToUse)
+		end
+	end
 end
 
-function module:ElementalFireFade(rest)
-	self:RemoveBar(rest..L["bar_elementalFire"])
+function module:ElementalFireFade(player)
+	self:RemoveBar(player..L["bar_elementalFire"])
+	if self.db.profile.elementalfiremark then
+		self:RestorePreviousRaidTargetForPlayer(player)
+	end
+end
+
+function module:OnFriendlyDeath(msg)
+	-- Remove bar and raid marker when a player dies
+	local _, _, player = string.find(msg, "(.+) die")
+	if player then
+		if player == "You" then player = UnitName("player") end
+		self:ElementalFireFade(player)
+	end
 end

@@ -154,6 +154,7 @@ Raids\MC\AncientCoreHound.lua
 Raids\MC\FlameImp.lua
 Raids\MC\Surger.lua
 Raids\MC\CoreHound.lua
+Raids\MC\Thaurissan.lua
 
 Raids\DireMaul\CaptainKromcrush.lua
 Raids\DireMaul\Gordok.lua

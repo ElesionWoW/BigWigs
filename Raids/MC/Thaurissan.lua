@@ -64,10 +64,14 @@ function module:OnSetup()
 end
 
 function module:OnEngage()
-	self:CombustionCast()
+	if self.db.profile.runes then
+		self:Bar(L["bar_detonation"], timer.runeCooldown + timer.runeDuration, icon.detonation, true, color.detonation)
+	end
 end
 
 function module:OnDisengage()
+	self:CancelDelayedBar(L["bar_detonation"])
+	self:CancelDelayedBar(L["bar_combustion"])
 end
 
 function module:AfflictionEvent(msg)
@@ -99,14 +103,14 @@ end
 function module:CombustionCast()
 	-- schedule next opposite rune
 	if self.db.profile.runes then
-		self:Bar(L["bar_detonation"], timer.runeCooldown + timer.runeDuration, icon.detonation, true, color.detonation)
+		self:DelayedBar(timer.runeDuration, L["bar_detonation"], timer.runeCooldown, icon.detonation, true, color.detonation)
 	end
 end
 
 function module:DetonationCast()
 	-- schedule next opposite rune
 	if self.db.profile.runes then
-		self:Bar(L["bar_combustion"], timer.runeCooldown + timer.runeDuration, icon.combustion, true, color.combustion)
+		self:DelayedBar(timer.runeDuration, L["bar_combustion"], timer.runeCooldown, icon.combustion, true, color.combustion)
 	end
 end
 

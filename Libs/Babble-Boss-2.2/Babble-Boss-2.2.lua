@@ -1,4 +1,4 @@
-﻿--[[
+--[[
 Name: Babble-Boss-2.2
 Revision: 20005
 Author(s): ckknight (ckknight@gmail.com)
@@ -28,31 +28,21 @@ local BabbleBoss = AceLibrary("AceLocale-2.2"):new(MAJOR_VERSION)
 
 BabbleBoss:RegisterTranslations("enUS", function()
 	return {
-		["Core Hound"] = true,
-		["Lava Surger"] = true,
-		["Flame Imp"] = true,
-		["Mad Servant"] = true,
-		["Deathknight Cavalier"] = true,
-		["Death Lord"] = true,
-		["Doctor Weavil"] = true,
-		["Ostarius"] = true,
-		["Concavius"] = true,
-		["Rotmaw"] = true,
+		["Rotmaw"] = true, --Black Morass
 		["Antnormi"] = true,
 		["Mossheart"] = true,
 		["Time-Lord Epochronos"] = true,
 		["Drifting Avatar of Sand"] = true,
 		["Epidamu"] = true,
 		["Chronar"] = true,
-		["Rookery Hatcher"] = true,
-		["Rookery Guardian"] = true,
-		["Sanctum Dragonkin"] = true,
+		["Sanctum Dragonkin"] = true, --Emerald Sanctum
 		["Sanctum Dreamer"] = true,
 		["Sanctum Supressor"] = true,
 		["Sanctum Wyrmkin"] = true,
 		["Sanctum Wyrm"] = true,
 		["Solnius"] = true,
 		["Erennius"] = true,
+		["Master Blacksmith Rolfen"] = true, --Lower Karazhan Halls
 		["Dark Rider Champion"] = true,
 		["Lord Blackwald II"] = true,
 		["Phantom Servant"] = true,
@@ -60,23 +50,22 @@ BabbleBoss:RegisterTranslations("enUS", function()
 		["Grizikil"] = true,
 		["Clawlord Howlfang"] = true,
 		["Moroes"] = true,
-		["Blackhand Incarcerator"] = true,
-		["Venom Stalker"] = true,
-		["Living Monstrosity"] = true,
-		["Deathknight Captain"] = true,
-		["Death Talon Wyrmguard"] = true,
-		["Anubisath Sentinel"] = true,
-		["Qiraji Brainwasher"] = true,
-		["Qiraji Mindslayer"] = true,
-		["Qiraji Champion"] = true,
-		["Flesh Hunter"] = true,
-		["Deathknight Captain"] = true,
-		["Nerubian Overseer"] = true,
-		["Avalanchion"] = true,
+		["Nerubian Overseer"] = true, --TWoW world bosses
+		["Dark Reaver of Karazhan"] = true,
+		["Ostarius"] = true,
+		["Doctor Weavil"] = true, --Shifting Sands
+		["Twilight Corrupter"] = true,
+		["Avalanchion"] = true, --elemental invasion
 		["The Windreaver"] = true,
 		["Baron Charr"] = true,
 		["Princess Tempestria"] = true,
-		["Grethok the Controller"] = true,
+		["Deathknight Captain"] = true, --Naxx
+		["Deathknight Cavalier"] = true,
+		["Death Lord"] = true,
+		["Venom Stalker"] = true,
+		["Living Monstrosity"] = true,
+		["Gargoyle"] = true,
+		["Stoneskin Gargoyle"] = true,
 		["Patchwerk"] = true,
 		["Grobbulus"] = true,
 		["Gluth"] = true,
@@ -99,6 +88,10 @@ BabbleBoss:RegisterTranslations("enUS", function()
 		["Loatheb"] = true,
 		["Sapphiron"] = true,
 		["Kel'Thuzad"] = true,
+		["Grethok the Controller"] = true, --BWL
+		["Death Talon Wyrmguard"] = true,
+		["Rookery Hatcher"] = true,
+		["Rookery Guardian"] = true,
 		["Lord Victor Nefarius"] = true,
 		["Nefarian"] = true,
 		["Vaelastrasz the Corrupt"] = true,
@@ -108,6 +101,10 @@ BabbleBoss:RegisterTranslations("enUS", function()
 		["Ebonroc"] = true,
 		["Firemaw"] = true,
 		["Flamegor"] = true,
+		["Ancient Core Hound"] = true, --MC
+		["Core Hound"] = true,
+		["Lava Surger"] = true,
+		["Flame Imp"] = true,
 		["Majordomo Executus"] = true,
 		["Ragnaros"] = true,
 		["Baron Geddon"] = true,
@@ -119,15 +116,13 @@ BabbleBoss:RegisterTranslations("enUS", function()
 		["Gehennas"] = true,
 		["Magmadar"] = true,
 		["Onyxia"] = true,
-		["Azuregos"] = true,
+		["Azuregos"] = true, --Vanilla world bosses
 		["Lord Kazzak"] = true,
 		["Ysondre"] = true,
 		["Emeriss"] = true,
 		["Taerar"] = true,
 		["Lethon"] = true,
-		["Dark Reaver of Karazhan"] = true,
-		["Twilight Corrupter"] = true,
-		["High Priestess Jeklik"] = true,
+		["High Priestess Jeklik"] = true, --ZG
 		["High Priest Venoxis"] = true,
 		["High Priest Thekal"] = true,
 		["High Priestess Arlokk"] = true,
@@ -135,19 +130,25 @@ BabbleBoss:RegisterTranslations("enUS", function()
 		["Jin'do the Hexxer"] = true,
 		["Bloodlord Mandokir"] = true,
 		["Gahz'ranka"] = true,
+		["Mad Servant"] = true,
 		["Gri'lek"] = true,
 		["Hazza'rah"] = true,
 		["Renataki"] = true,
 		["Wushoolay"] = true,
 		["Hakkar"] = true,
+		["Anubisath Guardian"] = true, --AQ20
 		["Ayamiss the Hunter"] = true,
 		["Buru the Gorger"] = true,
+		["Flesh Hunter"] = true,
 		["General Rajaxx"] = true,
+		["Hive'Zara Soldier"] = true,
 		["Lieutenant General Andorov"] = true,
 		["Moam"] = true,
-		["Hive'Zara Soldier"] = true,
-		["Anubisath Guardian"] = true,
 		["Ossirian the Unscarred"] = true,
+		["Anubisath Sentinel"] = true, --AQ40
+		["Qiraji Brainwasher"] = true,
+		["Qiraji Mindslayer"] = true,
+		["Qiraji Champion"] = true,
 		["Lord Kri"] = true,
 		["Princess Yauj"] = true,
 		["Vem"] = true,
@@ -165,7 +166,7 @@ BabbleBoss:RegisterTranslations("enUS", function()
 		["Emperor Vek'nilash"] = true,
 		["The Twin Emperors"] = true,
 		["Viscidus"] = true,
-		["Alzzin the Wildshaper"] = true,
+		["Alzzin the Wildshaper"] = true, --dungeon bosses
 		["Ambassador Flamelash"] = true,
 		["Anger'rel"] = true,
 		["Archivist Galford"] = true,
@@ -412,13 +413,12 @@ BabbleBoss:RegisterTranslations("enUS", function()
 		["Rethilgore"] = true;
 		["Atiesh"] = true;
 		["Stratholme Courier"] = true;
-		["Ancient Core Hound"] = true;
 		["Gurubashi Berserker"] = true;
 		["Gurubashi Bat Rider"] = true;
 		["Elder Mottled Boar"] = true,
-		["Gargoyle"] = true,
 		["Alterac Valley"] = true,
-		["Arathi Basin"] = true
+		["Arathi Basin"] = true,
+		["Blackhand Incarcerator"] = true,
 	}
 end)
 

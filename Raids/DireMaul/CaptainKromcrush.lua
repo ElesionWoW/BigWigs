@@ -1,12 +1,19 @@
 
 local module, L = BigWigs:ModuleDeclaration("Captain Kromcrush", "Dire Maul")
 
-module.revision = 30002
+module.revision = 30003
 module.enabletrigger = module.translatedName
 module.toggleoptions = {"retaliation", "adds", "fear", "bosskill"}
 module.zonename = {
 	AceLibrary("AceLocale-2.2"):new("BigWigs")["Dire Maul"],
 	AceLibrary("Babble-Zone-2.2")["Dire Maul"],
+}
+
+-- module defaults
+module.defaultDB = {
+	retaliation = true,
+	adds = true,
+	fear = true,
 }
 
 L:RegisterTranslations("enUS", function() return {
@@ -30,13 +37,14 @@ L:RegisterTranslations("enUS", function() return {
 	fearBar = "Fear CD",
 	
 	retaliationUpTrigger = "Captain Kromcrush gains Retaliation",
-	retaliationUpMessage = "Retaliation! Stop damage!",
+	retaliationUpMessage = "Retaliation! Stop melee damage!",
+	retaliationUpBar = "Retaliation",
 	
 	retaliationDownTrigger = "Retaliation fades from Captain Kromcrush",
-	retaliationDownMessage = "Retaliation faded! Go!",
+	retaliationDownMessage = "Retaliation faded! Melee damage go!",
 	
 	retaliationHurtTrigger = "Captain Kromcrush's Retaliation hits you for",
-	retaliationHurtMessage = "I'm an idiot taking damage from Retaliation",
+	retaliationHurtMessage = "Stop Attacking!",
 	
 	addsTrigger = "Help me crush these punys",
 	addsUpMessage = "Adds are up!",
@@ -80,14 +88,11 @@ function module:OnSetup()
 end
 
 function module:OnEngage()
-	if playerClass == "SHAMAN" then
+	if playerClass == "SHAMAN" and self.db.profile.fear then
 		self:WarningSign(icon.tremor, 0.7)
 		self:Sound("Beware")
 	end
 	self:Bar(L["fearBar"], timer.fear, icon.fear, true, "white")
-	if UnitName("target") == "Captain Kromcrush" and (IsRaidLeader() or IsRaidOfficer()) then
-		klhtm.net.sendmessage("target " .. "Captain Kromcrush")
-	end
 end
 
 function module:OnDisengage()
@@ -113,6 +118,10 @@ function module:Event(msg)
 end
 
 function module:AddsUp()
+	if not self.db.profile.adds then
+		return
+	end
+	
 	if playerClass == "PRIEST" or playerClass == "WARLOCK" then
 		self:WarningSign(icon.fear, 0.7)
 	end
@@ -126,27 +135,97 @@ function module:AddsUp()
 end
 
 function module:Fear()
+	if not self.db.profile.fear then
+		return
+	end
+	
 	if GetTime() > lastFear + 2 then
 		lastFear = GetTime()
-		self:Message(L["fearMessage"], "Attention", false, "Long", false)
+		self:Message(L["fearMessage"], "Attention", false, "Alarm", false)
 		self:Bar(L["fearBar"], timer.fear, icon.fear, true, "white")
 	end
 end
 
 function module:RetaliationUp()
-	if playerClass == "WARRIOR" or playerClass == "ROGUE" then
+	if self.db.profile.retaliation then
 		self:Message(L["retaliationUpMessage"], "Important", false, "Beware", false)
-		self:WarningSign(icon.retaliation, 15)
+		self:Bar(L["retaliationUpBar"], timer.retaliation, icon.retaliation, true, "red")
+		self:WarningSign(icon.retaliation, timer.retaliation)
 	end
 end
 
 function module:RetaliationDown()
-	if playerClass == "WARRIOR" or playerClass == "ROGUE" then
-		self:Message(L["retaliationDownMessage"], "Important", false, "gogogo", false)
+	if self.db.profile.retaliation then
+		self:Message(L["retaliationDownMessage"], "Important", false, "Long", false)
+		self:RemoveBar(L["retaliationUpBar"])
 		self:RemoveWarningSign(icon.retaliation)
 	end
 end
 
 function module:RetaliationHurt()
-	self:SendSay(L["retaliationHurtMessage"])
+	if self.db.profile.retaliation then
+		self:Message(L["retaliationHurtMessage"], "Urgent", false, "Info", false)
+	end
 end
+
+
+function module:Test()
+	-- Initialize module state
+	self:Engage()
+
+	local events = {
+		-- Fear
+		{ time = 11.5, func = function()
+			local msg = "You are afflicted by Intimidating Shout."
+			print("Test: " .. msg)
+			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
+		end },
+		-- Add summon at 50%
+		{ time = 15, func = function()
+			local msg = "Help me crush these punys!"
+			print("Test: " .. msg)
+			module:TriggerEvent("CHAT_MSG_MONSTER_YELL", msg)
+		end },
+		-- Retaliation start
+		{ time = 20, func = function()
+			local msg = "Captain Kromcrush gains Retaliation."
+			print("Test: " .. msg)
+			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_CREATURE_BUFFS", msg)
+		end },
+		-- Retaliation hurt
+		{ time = 24, func = function()
+			local msg = "Captain Kromcrush's Retaliation hits you for 1716."
+			print("Test: " .. msg)
+			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
+		end },
+		-- Retaliation hurt
+		{ time = 25, func = function()
+			local msg = "Captain Kromcrush's Retaliation hits you for 1682."
+			print("Test: " .. msg)
+			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
+		end },
+		-- Retaliation end
+		{ time = 35, func = function()
+			local msg = "Retaliation fades from Captain Kromcrush."
+			print("Test: " .. msg)
+			module:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_OTHER", msg)
+		end },
+
+		-- End of Test
+		{ time = 40, func = function()
+			print("Test: Disengage")
+			module:Disengage()
+		end },
+	}
+
+	-- Schedule each event at its absolute time
+	for i, event in ipairs(events) do
+		self:ScheduleEvent("KromcrushTest" .. i, event.func, event.time)
+	end
+
+	self:Message("Captain Kromcrush test started", "Positive")
+	return true
+end
+
+-- Test command:
+-- /run local m=BigWigs:GetModule("Captain Kromcrush"); BigWigs:SetupModule("Captain Kromcrush");m:Test();

@@ -1547,3 +1547,20 @@ function BigWigs:CancelAuraTexture(texture)
 	return false
 end
 
+-- Virtual Tooltip to scan for strings
+BigWigs.VTT = CreateFrame("GameTooltip", "BigWigsVTT", nil, "GameTooltipTemplate")
+BigWigs.VTT:SetOwner(BigWigsVTT, "ANCHOR_NONE")
+
+function BigWigs:BuffNameByIndex(buffIndex)
+	BigWigsVTT:SetPlayerBuff(buffIndex)
+	
+	local line = getglobal("BigWigsVTTTextLeft1")
+	if line and line:IsVisible() then
+		return line:GetText()
+	else -- SetPlayerBuff() with non-existing buffIndex will remove the owner, breaking the tooltip; should never happen but let's recover from it anyway
+		BigWigs.VTT:SetOwner(BigWigsVTT, "ANCHOR_NONE")
+	end
+end
+-- /run local i=0 DEFAULT_CHAT_FRAME:AddMessage("Buff "..(i+1)..": "..BigWigs:BuffNameByIndex(i))
+
+

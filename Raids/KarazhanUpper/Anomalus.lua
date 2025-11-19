@@ -1,9 +1,9 @@
 local module, L = BigWigs:ModuleDeclaration("Anomalus", "Karazhan")
 
 -- module variables
-module.revision = 30001
+module.revision = 30002
 module.enabletrigger = module.translatedName
-module.toggleoptions = { "arcaneoverload", "arcaneprison", "manaboundstrike", "manaboundframe", "markdampenedplayers", "bosskill" }
+module.toggleoptions = { "arcaneoverload", "arcaneoverloadsay", "markdampenedplayers", "yellondampen", -1, "arcaneprison", "unstablemagic", -1, "manaboundstrike", "manaboundframe", -1, "printanomalus", "bosskill" }
 module.zonename = {
 	AceLibrary("AceLocale-2.2"):new("BigWigs")["Tower of Karazhan"],
 	AceLibrary("Babble-Zone-2.2")["Tower of Karazhan"],
@@ -12,12 +12,16 @@ module.zonename = {
 -- module defaults
 module.defaultDB = {
 	arcaneoverload = true,
+	arcaneoverloadsay = true,
+	markdampenedplayers = false,
+	yellondampen = false,
 	arcaneprison = true,
+	unstablemagic = true,
 	manaboundstrike = true,
 	manaboundframe = true,
 	manaboundframeposx = 100,
 	manaboundframeposy = 300,
-	markdampenedplayers = false,
+	printanomalus = false,
 }
 
 -- localization
@@ -27,11 +31,27 @@ L:RegisterTranslations("enUS", function()
 
 		arcaneoverload_cmd = "arcaneoverload",
 		arcaneoverload_name = "Arcane Overload Alert",
-		arcaneoverload_desc = "Warns when players get affected by Arcane Overload",
+		arcaneoverload_desc = "Warns about other players getting affected by Arcane Overload (bomb), marks them with Skull, and shows a cooldown timer",
+		
+		arcaneoverloadsay_cmd = "arcaneoverloadsay",
+		arcaneoverloadsay_name = "Arcane Overload Announce",
+		arcaneoverloadsay_desc = "Announce to /say when you get the bomb",
+
+		markdampenedplayers_cmd = "markdampenedplayers",
+		markdampenedplayers_name = "Mark Dampened Players",
+		markdampenedplayers_desc = "Mark players affected by Arcane Dampening if there are unused raid icons (requires assistant or leader)",
+
+		yellondampen_cmd = "yellondampen",
+		yellondampen_name = "Soaker Yell",
+		yellondampen_desc = "Announce that you are ready to soak with a yell",
 
 		arcaneprison_cmd = "arcaneprison",
 		arcaneprison_name = "Arcane Prison Alert",
 		arcaneprison_desc = "Warns when players get affected by Arcane Prison",
+
+		unstablemagic_cmd = "unstablemagic",
+		unstablemagic_name = "Unstable Magic Alert",
+		unstablemagic_desc = "Warns when standing in an Unstable Magic zone",
 
 		manaboundstrike_cmd = "manaboundstrike",
 		manaboundstrike_name = "Manabound Strike Alert",
@@ -41,27 +61,46 @@ L:RegisterTranslations("enUS", function()
 		manaboundframe_name = "Manabound Strikes Frame",
 		manaboundframe_desc = "Shows a frame with player stacks and timers for Manabound Strikes",
 
-		markdampenedplayers_cmd = "markdampenedplayers",
-		markdampenedplayers_name = "Mark Dampened Players",
-		markdampenedplayers_desc = "Mark players affected by Arcane Dampening if there are unused raid icons (requires assistant or leader)",
+		printanomalus_cmd = "printanomalus",
+		printanomalus_name = "Troubleshoot Info",
+		printanomalus_desc = "Print information to your main chat window: Bomb gains, deaths to Unstable Magic zones",
+
 
 		trigger_arcaneOverloadYou = "You are afflicted by Arcane Overload",
 		trigger_arcaneOverloadOther = "(.+) is afflicted by Arcane Overload",
-		msg_arcaneOverloadYou = "BOMB ON YOU - DPS HARD THEN RUN AWAY!",
+		msg_arcaneOverloadYou = "BOMB ON YOU",
+		say_arcaneOverloadYou = "I have the bomb!",
 		msg_arcaneOverloadOther = "BOMB on %s!",
 		bar_arcaneOverload = "Next Bomb",
 		bar_arcaneOverloadExplosion = "BOMB ON YOU Explosion",
 
+		trigger_arcaneDampeningYou = "You are afflicted by Arcane Dampening",
+		trigger_arcaneDampening = "(.+) is afflicted by Arcane Dampening",
+		yell_arcaneDampening = "I can soak now!",
+		bar_arcaneDampening = "Arcane Dampening - Can Soak",
+		trigger_arcaneDampeningFade = "Arcane Dampening fades from (.+)",
+
 		trigger_arcanePrison = "(.+) is afflicted by Arcane Prison",
 		msg_arcanePrison = "Arcane Prison on %s!",
+		
+		debuff_unstableMagic = "Unstable Magic",
+		bar_unstableMagic = "Floor Zone exploding",
+		msg_unstableMagicSoak = "Soaking...",
+		msg_unstableMagicRun = "Move out of the floor zone!",
+		msg_unstableMagicBomb = "BOMB + FLOOR ZONE!",
+		warn_unstableMagicRun = "MOVE!",
 
+		trigger_manaboundStrike1 = "(.+) is afflicted by Manabound Strikes%.",
 		trigger_manaboundStrike = "(.+) is afflicted by Manabound Strikes %((%d+)%)",
 		trigger_manaboundFade = "Manabound Strikes fades from (.+)",
 
-		trigger_arcaneDampening = "(.+) is afflicted by Arcane Dampening",
-		trigger_arcaneDampeningFade = "Arcane Dampening fades from (.+)",
-
 		bar_manaboundExpire = "Manabound stacks expire",
+		
+		trigger_deathWish = "You are afflicted by Death Wish",
+		say_deathWishAR = "Death Wish reduced your AR to ",
+		say_deathWishFail = "I used Death Wish and it reduced my AR below 200.",
+
+		trigger_unstableMagicHit = "Unstable Magic hits (.+) for (.+) Arcane damage",
 	}
 end)
 
@@ -74,11 +113,13 @@ local timer = {
 	manaboundDuration = 60,
 	arcaneOverloadExplosion = 15,
 	arcaneDampening = 45, -- duration of Arcane Dampening
+	unstableMagic = 8, -- duration of Arcane Dampening
 }
 
 local icon = {
 	arcaneOverload = "INV_Misc_Bomb_04",
 	arcanePrison = "Spell_Frost_Glacier",
+	unstableMagic = "Spell_Nature_WispSplode",
 	manaboundStrike = "Spell_Arcane_FocusedPower",
 	manaboundExpire = "Spell_Holy_FlashHeal",
 	arcaneDampening = "Spell_Nature_AbolishMagic", -- icon for Arcane Dampening
@@ -97,6 +138,8 @@ local maxManaboundPlayers = 10
 local arcaneOverloadCount = 0
 local manaboundStrikesPlayers = {}
 local dampenedPlayers = {}
+local inZoneUntil = 0
+local lastBomb = 0
 
 function module:OnEnable()
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE", "AfflictionEvent")
@@ -105,6 +148,10 @@ function module:OnEnable()
 	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_PARTY")
 	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_OTHER")
 	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_SELF")
+	self:RegisterEvent("PLAYER_AURAS_CHANGED")
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE", "SpellHitEvent")
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_PARTY_DAMAGE", "SpellHitEvent")
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE", "SpellHitEvent")
 
 	self:ThrottleSync(3, syncName.arcaneOverload)
 	self:ThrottleSync(3, syncName.arcanePrison)
@@ -123,6 +170,7 @@ end
 function module:OnEngage()
 	arcaneOverloadCount = 1
 	manaboundStrikesPlayers = {}
+	inZoneUntil = 0
 
 	if self.db.profile.arcaneoverload then
 		self:Bar(L["bar_arcaneOverload"], timer.arcaneOverload[arcaneOverloadCount], icon.arcaneOverload)
@@ -143,12 +191,21 @@ end
 
 function module:AfflictionEvent(msg)
 	-- Arcane Overload
-	if string.find(msg, L["trigger_arcaneOverloadYou"]) then
-		self:Sync(syncName.arcaneOverload .. " " .. UnitName("player"))
+	if string.find(msg, L["trigger_arcaneOverloadYou"]) and GetTime() > lastBomb + 2 then
+		local player = UnitName("player")
+		self:ArcaneOverload(player) -- let's not miss a sync
+		self:Sync(syncName.arcaneOverload .. " " .. player)
+		if self.db.profile.printanomalus then
+			print(msg)
+		end
+		lastBomb = GetTime() -- double debuffs so skip the second
 	else
 		local _, _, player = string.find(msg, L["trigger_arcaneOverloadOther"])
 		if player then
 			self:Sync(syncName.arcaneOverload .. " " .. player)
+			if self.db.profile.printanomalus then
+				print(msg)
+			end
 		end
 	end
 
@@ -163,11 +220,29 @@ function module:AfflictionEvent(msg)
 	if player and count then
 		self:Sync(syncName.manaboundStrike .. " " .. player .. " " .. count)
 	end
+	local _, _, player = string.find(msg, L["trigger_manaboundStrike1"])
+	if player then
+		self:Sync(syncName.manaboundStrike .. " " .. player .. " " .. 1)
+	end
 
 	-- Arcane Dampening
-	local _, _, player = string.find(msg, L["trigger_arcaneDampening"])
-	if player then
-		self:Sync(syncName.arcaneDampening .. " " .. player)
+	if string.find(msg, L["trigger_arcaneDampeningYou"]) then
+		self:Sync(syncName.arcaneDampening .. " " .. UnitName("player"))
+	else
+		local _, _, player = string.find(msg, L["trigger_arcaneDampening"])
+		if player then
+			self:Sync(syncName.arcaneDampening .. " " .. player)
+		end
+	end
+	
+	-- Death Wish
+	if string.find(msg, L["trigger_deathWish"]) then
+		local _, AR = UnitResistance("player",6)
+		if AR < 200 then
+			SendChatMessage(L["say_deathWishFail"], "RAID")
+		else
+			print(L["say_deathWishAR"]..AR)
+		end
 	end
 end
 
@@ -213,6 +288,68 @@ function module:CHAT_MSG_SPELL_AURA_GONE_OTHER(msg)
 	end
 end
 
+function module:PLAYER_AURAS_CHANGED()
+	local duration = timer.unstableMagic + 2
+	local i=0
+	while not (GetPlayerBuff(i,"HARMFUL") == -1) do -- scan all debuffs
+		local buffIndex = GetPlayerBuff(i,"HARMFUL")
+		if GetPlayerBuffTexture(buffIndex) == "Interface\\Icons\\"..icon.unstableMagic then -- right icon, but Arcane Overload has the same
+			local name = BigWigs:BuffNameByIndex(buffIndex)
+			if name and name == L["debuff_unstableMagic"] then -- confirmed name
+				local newDuration = GetPlayerBuffTimeLeft(buffIndex)
+				if newDuration < duration then -- store shortest debuff
+					duration = newDuration
+				end
+			end
+		end
+		i=i+1
+	end
+	
+	if duration < timer.unstableMagic + 1 then -- debuff found
+		if GetTime() + duration > inZoneUntil or GetTime() + duration < inZoneUntil - 0.3 then -- new zone, warn about it
+			self:UnstableMagic(duration)
+			inZoneUntil = GetTime() + duration + 0.1
+		end		
+	else -- no debuff found, reset timer to get warnings again
+		if inZoneUntil > 0 then -- if leaving zone confirm safety, cancel bar
+			self:Sound("Long")
+			self:RemoveBar(L["bar_unstableMagic"])
+		end
+		inZoneUntil = 0
+	end	
+end
+
+function module:UnstableMagic(duration)
+	-- infer player status from which bars are currently active
+	local bomb = self:BarStatus(L["bar_arcaneOverloadExplosion"])
+	local dampened, time, elapsed = self:BarStatus(L["bar_arcaneDampening"])
+	
+	if bomb then -- always warn
+		self:RemoveWarningSign(icon.arcaneOverload, true) -- override bomb sign
+		self:WarningSign(icon.unstableMagic, 3, true, L["msg_unstableMagicBomb"])
+		self:Message(L["msg_unstableMagicBomb"], "Important")
+		self:Message(L["msg_unstableMagicBomb"], "Important")
+		self:Message(L["msg_unstableMagicBomb"], "Important", true, "RunAway")
+		self:Bar(L["bar_unstableMagic"], duration, icon.unstableMagic, true, "red")
+	elseif dampened and time - elapsed > duration + 0.1 and self.db.profile.unstablemagic then -- notify if enough time and enabled
+		self:Message(L["msg_unstableMagicSoak"], "Positive", true, "Long")
+		self:Bar(L["bar_unstableMagic"], duration, icon.unstableMagic, true, "green")
+	elseif self.db.profile.unstablemagic then -- warn if enabled
+		self:Message(L["msg_unstableMagicRun"], "Urgent", true, "RunAway")
+		self:WarningSign(icon.unstableMagic, 2, true, L["warn_unstableMagicRun"])
+		self:Bar(L["bar_unstableMagic"], duration, icon.unstableMagic, true, "red")
+	end
+end
+
+function module:SpellHitEvent(msg)
+	if self.db.profile.printanomalus then
+		local _,_,player,amount = string.find(msg, L["trigger_unstableMagicHit"])
+		if player and amount and tonumber(amount) > 8000 then
+			print(msg)
+		end
+	end
+end
+
 function module:OnFriendlyDeath(msg)
 	-- Remove raid marker when a player dies
 	local _, _, player = string.find(msg, "(.+) dies")
@@ -222,7 +359,7 @@ function module:OnFriendlyDeath(msg)
 end
 
 function module:BigWigs_RecvSync(sync, rest, nick)
-	if sync == syncName.arcaneOverload and rest then
+	if sync == syncName.arcaneOverload and rest and rest ~= UnitName("player") then
 		self:ArcaneOverload(rest)
 	elseif sync == syncName.arcanePrison and rest then
 		self:ArcanePrison(rest)
@@ -246,16 +383,21 @@ function module:ArcaneOverload(player)
 	-- Calculate next timer (minimum 4.5 seconds)
 	local nextTimer = timer.arcaneOverload[arcaneOverloadCount] or timer.minArcaneOverload
 
-	if self.db.profile.arcaneoverload then
-		if player == UnitName("player") then
-			self:Message(L["msg_arcaneOverloadYou"], "Important", true, "Alarm")
-			self:WarningSign(icon.arcaneOverload, 5, true, "BOMB ON YOU")
-			-- Add personal explosion bar with red color
-			self:Bar(L["bar_arcaneOverloadExplosion"], timer.arcaneOverloadExplosion, icon.arcaneOverload, true, "red")
-		else
-			self:Message(string.format(L["msg_arcaneOverloadOther"], player), "Important")
+	if player == UnitName("player") then -- always show personal warning
+		self:Message(L["msg_arcaneOverloadYou"], "Important", true, "Beware")
+		self:WarningSign(icon.arcaneOverload, 5, true, L["msg_arcaneOverloadYou"])
+		self:Bar(L["bar_arcaneOverloadExplosion"], timer.arcaneOverloadExplosion, icon.arcaneOverload, true, "red")
+		if self.db.profile.arcaneoverloadsay then
+			SendChatMessage(L["say_arcaneOverloadYou"], "SAY")
 		end
-
+		-- force re-check for floor zones
+		inZoneUntil = 0
+		self:PLAYER_AURAS_CHANGED()
+	elseif self.db.profile.arcaneoverload then
+		self:Message(string.format(L["msg_arcaneOverloadOther"], player), "Important")
+	end
+	
+	if self.db.profile.arcaneoverload then
 		-- set latest bomb as skull
 		self:SetRaidTargetForPlayer(player, 8)
 
@@ -307,7 +449,10 @@ function module:ArcaneDampening(player)
 
 	-- Add bar for the player with Arcane Dampening
 	if player == UnitName("player") then
-		self:Bar("Arcane Dampening - Can Soak", timer.arcaneDampening, icon.arcaneDampening)
+		self:Bar(L["bar_arcaneDampening"], timer.arcaneDampening, icon.arcaneDampening)
+		if self.db.profile.yellondampen then
+			SendChatMessage(L["yell_arcaneDampening"], "YELL")
+		end
 	end
 end
 
@@ -316,7 +461,7 @@ function module:ArcaneDampeningFade(player)
 
 	-- Remove the bar if it's the player
 	if player == UnitName("player") then
-		self:RemoveBar("Arcane Dampening - Can Soak")
+		self:RemoveBar(L["bar_arcaneDampening"])
 	end
 end
 
@@ -487,7 +632,7 @@ function module:Test()
 	self:Engage()
 
 	local events = {
-		-- Arcane Overload events
+		-- Arcane Overload (bomb) events
 		{ time = 5, func = function()
 			print("Test: raid1 gets Arcane Overload")
 			local name = UnitName("raid1") or "raid1"
@@ -531,17 +676,52 @@ function module:Test()
 			local name = UnitName("raid1") or "raid1"
 			module:CHAT_MSG_COMBAT_FRIENDLY_DEATH(name .. " dies")
 		end },
+		{ time = 31, func = function()
+			print("Test: You are afflicted by Arcane Dampening")
+			module:AfflictionEvent("You are afflicted by Arcane Dampening.")
+		end },
+		
+		-- Unstable Mana (floor zone) events
+		{ time = 19, func = function()
+			print("Test: Entering Unstable Magic zone")
+			local duration = 8
+			inZoneUntil = GetTime() + duration + 0.1
+			module:UnstableMagic(duration)
+		end },
+		{ time = 21, func = function()
+			print("Test: Alice fails Unstable Magic zone")
+			module:SpellHitEvent("Anomalus's Unstable Magic hits Alice for 25035 Arcane damage. (25034 resisted)")
+		end },
+		{ time = 26, func = function()
+			print("Test: Leaving Unstable Magic zone")
+			module:PLAYER_AURAS_CHANGED()
+		end },
+		{ time = 34, func = function()
+			print("Test: Entering Unstable Magic zone")
+			local duration = 5
+			inZoneUntil = GetTime() + duration + 0.1
+			module:UnstableMagic(duration)
+		end },
+		{ time = 39, func = function()
+			print("Test: Unstable Magic zone explodes, you soak.")
+			module:PLAYER_AURAS_CHANGED()
+			module:SpellHitEvent("Anomalus's Unstable Magic hits you for 2501 Arcane damage. (2500 resisted)")
+		end },
+		{ time = 48, func = function()
+			print("Test: You fail Unstable Magic zone.")
+			module:SpellHitEvent("Anomalus 's Unstable Magic hits you for 12519 Arcane damage. (37556 resisted)")
+		end },
 
 		-- Manabound Strikes events
 		{ time = 3, func = function()
-			print("Test: raid1 gets Manabound Strikes (1)")
+			print("Test: raid1 gets Manabound Strikes")
 			local name = UnitName("raid1") or "raid1"
-			module:AfflictionEvent(name .. " is afflicted by Manabound Strikes (1)")
+			module:AfflictionEvent(name .. " is afflicted by Manabound Strikes.")
 		end },
 		{ time = 8, func = function()
-			print("Test: raid2 gets Manabound Strikes (1)")
+			print("Test: raid2 gets Manabound Strikes")
 			local name = UnitName("raid2") or "raid2"
-			module:AfflictionEvent(name .. " is afflicted by Manabound Strikes (1)")
+			module:AfflictionEvent(name .. " is afflicted by Manabound Strikes.")
 		end },
 		{ time = 13, func = function()
 			print("Test: raid1 gets Manabound Strikes (2)")
@@ -549,9 +729,9 @@ function module:Test()
 			module:AfflictionEvent(name .. " is afflicted by Manabound Strikes (2)")
 		end },
 		{ time = 18, func = function()
-			print("Test: raid3 gets Manabound Strikes (1)")
+			print("Test: raid3 gets Manabound Strikes")
 			local name = UnitName("raid3") or "raid3"
-			module:AfflictionEvent(name .. " is afflicted by Manabound Strikes (1)")
+			module:AfflictionEvent(name .. " is afflicted by Manabound Strikes.")
 		end },
 		{ time = 20, func = function()
 			print("Test: raid2 gets Manabound Strikes (2)")
@@ -579,10 +759,16 @@ function module:Test()
 			module:AfflictionEvent(name .. " is afflicted by Manabound Strikes (3)")
 		end },
 		{ time = 45, func = function()
-			print("Test: raid6 gets Manabound Strikes (1)")
+			print("Test: raid6 gets Manabound Strikes")
 			local name = UnitName("raid6") or "raid6"
-			module:AfflictionEvent(name .. " is afflicted by Manabound Strikes (1)")
+			module:AfflictionEvent(name .. " is afflicted by Manabound Strikes.")
 		end },
+		-- Death Wish event
+		{ time = 47, func = function()
+			print("Test: You are afflicted by Death Wish")
+			module:AfflictionEvent("You are afflicted by Death Wish.")
+		end },
+		-- End of Test
 		{ time = 50, func = function()
 			print("Test: Disengage")
 			module:Disengage()

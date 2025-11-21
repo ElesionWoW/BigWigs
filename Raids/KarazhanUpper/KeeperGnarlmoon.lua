@@ -169,7 +169,6 @@ function module:OnEnable()
 	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_OTHER")
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE")
 	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE")
-	self:RegisterEvent("CHAT_MSG_COMBAT_HOSTILE_DEATH")
 
 	self:ThrottleSync(3, syncName.lunarShift)
 	self:ThrottleSync(5, syncName.owlPhaseStart)
@@ -248,7 +247,7 @@ function module:CHAT_MSG_SPELL_PERIODIC_CREATURE_BUFFS(msg)
 	end
 end
 
-function module:CHAT_MSG_COMBAT_HOSTILE_DEATH(msg)
+function module:OnEnemyDeath(msg)
 	if string.find(msg, L["trigger_owlKill"]) then
 		self:Sync(syncName.owlKill)
 		if self.db.profile.printkeeper then

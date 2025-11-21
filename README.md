@@ -1,13 +1,23 @@
-Various updates to K40 modules with lots of customization (check your boss settings!). Mostly tested.
+Big updates to K40 and MC (**check your boss settings!**), small fixes and updates here and there. Mostly tested.
 ## Karazhan 40 - Highlights
 * Trash - many additional mobs and mechanics (including "don't move" and "don't cast")
 * Keeper - accurate Owl phase timer
-* Incantagos - Affinity auto-targeting, Surge of Mana announce, Blizzard warning
+* Incantagos - Affinity auto-targeting, Surge of Mana victim bars, Blizzard warning
 * Anomalus - Floor Zone warnings
 * Echo - additional warnings, optional timers to align Resto Pot usage
 * Chess - accurate cast bars (hide, SBV), Curse CD (to allign hide phases)
 * Sanv - bar for add phase duration
+* Rupturan - alert when you stand in fire
+* Mephistroth - Doom bar, purge alert, better Shards handling, sound cue on Shackle fade
+## Future Ideas
+* Ragnaros - Identify the current tank, mark them, alert on tank knock-back.
+* Echo - Add duration bar for intitial Corruption victim (clickable to target).
+* Chess - Keep track of major piece health and announce every % below 5.
+* Sanv Tas'dal - Make Overflowing Hatred cast bar accurate.
+* Mephistroth - Identify the sleep target and mark them to indicate Crawler spawn point for OTs.
+* Add support for forking, allowing for independed version numbers.
 ## Karazhan 40 - Full Changelog
+Relative to pepopo978's BigWigs.
 ### General
 * Fixed various triggers and unit tests being based on formatted logs, eg " (1)".
 * Changed a few sound effects.
@@ -31,7 +41,7 @@ Various updates to K40 modules with lots of customization (check your boss setti
 * Added Affinity auto-targeting (default: off).
 * Shortened some overly verbose Affinity messages.
 * Added Berserk warning (always on).
-* Added Surge of Mana warning (default: on), /say announcement (default: on), auto-targeting of latest victim (default: off).
+* Added personal bars for every Surge of Mana victim (default: on; click bar to target victim, if paladin also to cast Hand of Freedom), /say announcement by victims (default: on).
 * Keep track of initial Ley-Seeker adds and warn if any are alive when boss it at 85% HP (always on).
 * Based the initial CD bar for Ley-Line Disturbance on the death of the fourth add and shortened CD bar (lowest observed in logs is 45s instead of 55s).
 ### Anomalus
@@ -67,16 +77,25 @@ Various updates to K40 modules with lots of customization (check your boss setti
 * Added alerts for Portal Opening and Enrage (always on).
 * Added timer bar for add phase (default: on).
 * Phase Shifted alerts now only trigger below 80% boss HP.
+### Rupturan
+* Added personal warning to move out of Ignite Rock flamestrike area (default: on).
+* Added Reform timers when Fragments are defeated (default: on).
+* Added alternate triggers to no longer depend on SuperWoW cast events.
+### Mephistroth
+* Added duration bar for Doom (default: on for druid/mage, off for everyone else), which is clickable to decurse the current Doom victim.
+* Added purge alert for Vampiric Aura (default: on for shaman/priest, off for everyone else).
+* Added duration bar for Vampiric Corruption (boss haste after purge; default: off).
+* Added warning and cast bar for Nathrezim Terror (default: on for shaman, off for everyone else).
+* Added sound cue to Shackle fade.
+* Reworked Shards handling: Added cast bar to incoming Shards. 120s CD bar split into 90s hard CD and 30s spawn window. Based Shard count on Shard death instead of channel fail (which may happen due to other reasons). Added counter for Shards remaining (default: off). Added messages for Shard phase win (6 shards dead) and fail (boss casting Unfathomed Hatred) for clarity.
+* Tattle option also prints to the default chat window.
+* Added alternate triggers to greatly reduce the reliance on SuperWoW cast events.
 
-Rupturan, Kruul, Mephistroth are unchanged for now.
+Kruul is unchanged for now.
 
-### Future Ideas:
-* Incantagos - Add bars for every Surge victim that target on click and auto-cancel when it fades or the target dies.
-* Chess - Keep track of major piece health and announce every % below 5.
-
-# BigWigs
+# BigWigs (legacy description)
 BigWigs is a World of Warcraft AddOn to predict certain AI behaviour to improve the players performance.<br>
-This Modification is built for Patch 1.12.1
+This Modification is built for Patch 1.12.1.
 
 ## How to install
 Either clone the repository to your WoW/Interface/Addons folder, or download manually via github (click on Clone or Download -> Download ZIP. Do not forget to rename the directory to "BigWigs" afterwards.

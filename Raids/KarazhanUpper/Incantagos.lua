@@ -3,11 +3,13 @@ local module, L = BigWigs:ModuleDeclaration("Ley-Watcher Incantagos", "Karazhan"
 -- module variables
 module.revision = 30003
 module.enabletrigger = module.translatedName
-module.toggleoptions = { "leyline", "affinity", "targetBlack", "targetBlue", "targetCrystal", "targetGreen", "targetMana", "targetRed", -1, "surgewarning", "surgesay", "surgetarget", "summonseeker", "summonwhelps", -1, "beam", "blizzard", "proximity", "cursewarning", "bosskill"}
+module.toggleoptions = { "leyline", "affinity", "targetBlack", "targetBlue", "targetCrystal", "targetGreen", "targetMana", "targetRed", -1, "surgewarning", "surgesay", "summonseeker", "summonwhelps", -1, "beam", "blizzard", "proximity", "cursewarning", "bosskill"}
 module.zonename = {
 	AceLibrary("AceLocale-2.2"):new("BigWigs")["Tower of Karazhan"],
 	AceLibrary("Babble-Zone-2.2")["Tower of Karazhan"],
 }
+
+local _, playerClass = UnitClass("player")
 
 -- module defaults
 module.defaultDB = {
@@ -21,7 +23,6 @@ module.defaultDB = {
 	targetRed = false,
 	surgewarning = true,
 	surgesay = true,
-	surgetarget = false,
 	summonseeker = true,
 	summonwhelps = true,
 	beam = true,
@@ -69,15 +70,11 @@ L:RegisterTranslations("enUS", function()
 
 		surgewarning_cmd = "surgewarning",
 		surgewarning_name = "Surge of Mana Alert",
-		surgewarning_desc = "Warns when you or another player gets Surge of Mana (beam attack from Ley-Seeker adds)",
+		surgewarning_desc = "Warns when you or another player gets Surge of Mana (beam attack from Ley-Seeker adds) with a message and a timer bar (click to target victim, if paladin also to cast Hand of Freedom)",
 
 		surgesay_cmd = "surgesay",
 		surgesay_name = "Surge of Mana Announce",
 		surgesay_desc = "Call for help in /say when you get Surge of Mana",
-
-		surgetarget_cmd = "surgetarget",
-		surgetarget_name = "Surge of Mana Target",
-		surgetarget_desc = "Auto-targets the latest Surge of Mana target for further action (healing, Hand of Freedom, etc)",
 
 		summonseeker_cmd = "summonseeker",
 		summonseeker_name = "Summon Ley-Seeker Alert",
@@ -148,8 +145,10 @@ L:RegisterTranslations("enUS", function()
 
 		trigger_surgeYou = "You are afflicted by Surge of Mana",
 		trigger_surge = "(.+) is afflicted by Surge of Mana",
+		trigger_surgeFade = "Surge of Mana fades from (.+)%.",
+		trigger_surgeDeath = "(.+) die",
 		msg_surgeYou = "Surge of Mana on YOU!",
-		msg_surge = "Surge of Mana on %s",
+		msg_surge = "Surge on %s",
 		warn_surge = "SURGE OF MANA",
 		yell_surge = "Help me! (Surge of Mana)",
 
@@ -196,6 +195,7 @@ local timer = {
 	affinity = 15,
 	initalBeamCD = 28,
 	beam = 13, -- 10 sec duration, starts 3 sec after initial targeting buff
+	surge = 8,
 }
 
 local icon = {
@@ -251,7 +251,10 @@ function module:OnEnable()
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE")
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE", "DebuffEvent")
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE", "DebuffEvent")
-	self:RegisterEvent("CHAT_MSG_COMBAT_HOSTILE_DEATH")
+
+	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_SELF", "FadeEvent")
+	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_PARTY", "FadeEvent")
+	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_OTHER", "FadeEvent")
 
 	if SUPERWOW_VERSION then
 		self:RegisterCastEventsForUnitName("Ley-Watcher Incantagos", "IncantagosCastEvent")
@@ -389,6 +392,7 @@ function module:CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE(msg)
 		self:WarningSign(icon.blizzard, 2, true, L["warn_blizzard"])
 		self:Message(L["msg_blizzard"], "Important", true, "Info")
 	elseif string.find(msg, L["trigger_surgeYou"]) then
+		self:SurgeBar(UnitName("player"))
 		if self.db.profile.surgewarning then
 			self:WarningSign(icon.surge, 2, false, L["warn_surge"])
 			self:Message(L["msg_surgeYou"], "Attention", true, "Info")
@@ -396,26 +400,20 @@ function module:CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE(msg)
 		if self.db.profile.surgesay then
 			SendChatMessage(L["yell_surge"], "SAY")
 		end
-		if self.db.profile.surgetarget then
-			TargetByName(UnitName("player"),true)
-		end
 	end
 end
 
 function module:DebuffEvent(msg)
 	local _, _, player = string.find(msg, L["trigger_surge"])
 	if player then
+		self:SurgeBar(player)
 		if self.db.profile.surgewarning then
 			self:Message(string.format(L["msg_surge"], player), "Attention", true, "Info")			
-		end
-		if self.db.profile.surgetarget then
-			TargetByName(player,true)
-			self:WarningSign(icon.surge, 1, false, L["warn_surge"])
 		end
 	end
 end
 
-function module:CHAT_MSG_COMBAT_HOSTILE_DEATH(msg)
+function module:OnEnemyDeath(msg)
 	if string.find(msg, L["trigger_seekerDeath"]) then
 		self.seekersLeft = self.seekersLeft -1
 		if self.seekersLeft == 0 then
@@ -423,6 +421,22 @@ function module:CHAT_MSG_COMBAT_HOSTILE_DEATH(msg)
 		elseif self.seekersLeft > 0 then
 			self:Message(string.format(L["msg_seekerCount"], self.seekersLeft), "Positive")	
 		end
+	end
+end
+
+function module:FadeEvent(msg)
+	local _, _, player = string.find(msg, L["trigger_surgeFade"])
+	if player then
+		player = player == "you" and UnitName("player") or player
+		self:RemoveBar(string.format(L["msg_surge"], player))
+	end
+end
+
+function module:OnFriendlyDeath(msg)
+	local _, _, player = string.find(msg, L["trigger_surgeDeath"])
+	if player then
+		player = player == "You" and UnitName("player") or player
+		self:RemoveBar(string.format(L["msg_surge"], player))
 	end
 end
 
@@ -565,6 +579,34 @@ function module:AllSeekersDead()
 	end
 end
 
+function module:SurgeBar(player)
+	if self.db.profile.surgewarning then
+		local barText = string.format(L["msg_surge"], player)
+		self:Bar(barText, timer.surge, icon.surge, true, "Cyan")
+		
+		-- Set the bar to target player and cast Hand of Freedom
+		local raidIndex = nil
+		for i = 1,40 do
+			local unit = "raid"..i
+			if UnitExists(unit) and UnitName(unit) == player then
+				raidIndex = unit
+				break
+			end
+		end
+		
+		self:SetCandyBarOnClick("BigWigsBar " .. barText, function(name, button, playerName, target)
+			TargetByName(playerName, true)
+			if playerClass == "PALADIN" then
+				if SUPERWOW_VERSION or SetAutoloot then
+					CastSpellByName("Hand of Freedom", target)
+				else
+					CastSpellByName("Hand of Freedom")
+				end
+			end
+		end, player, raidIndex)
+	end
+end
+
 function module:Test()
 	-- Initialize module state
 	self:OnSetup()
@@ -595,8 +637,9 @@ function module:Test()
 		end },
 		-- Kill one initial Seeker
 		{ time = 8, func = function()
-			print("Manascale Ley-Seeker dies.")
-			module:CHAT_MSG_COMBAT_HOSTILE_DEATH("Manascale Ley-Seeker dies.")
+			local msg = "Manascale Ley-Seeker dies."
+			print("Test: " .. msg)
+			self:TriggerEvent("CHAT_MSG_COMBAT_HOSTILE_DEATH", msg)
 		end },
 		-- Ley-Beam
 		{ time = 10, func = function()
@@ -611,8 +654,9 @@ function module:Test()
 		-- kill final initial Ley-Seeker 
 		{ time = 12, func = function()
 			self.seekersLeft = 1
-			print("Set seekers to 1, Manascale Ley-Seeker dies.")
-			module:CHAT_MSG_COMBAT_HOSTILE_DEATH("Manascale Ley-Seeker dies.")
+			local msg = "Manascale Ley-Seeker dies."
+			print("Test: Set seekers to 1, " .. msg)
+			self:TriggerEvent("CHAT_MSG_COMBAT_HOSTILE_DEATH", msg)
 		end },
 		{ time = 15, func = function()
 			print("Test: Stormhide gains Guided Ley-Beam")
@@ -669,16 +713,58 @@ function module:Test()
 		end },
 		
 		-- Surge of Mana
-		{ time = 29, func = function()
-			print("Test: You are afflicted by Surge of Mana")
-			module:CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE("You are afflicted by Surge of Mana.")
+		{ time = 68, func = function()
+			local msg = "You are afflicted by Surge of Mana."
+			print("Test: " .. msg)
+			self:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
 		end },
-		{ time = 35, func = function()
-			print("Test: "..UnitName("raid1").." is afflicted by Surge of Mana")
-			module:DebuffEvent(UnitName("raid1").." is afflicted by Surge of Mana.")
+		{ time = 68.5, func = function()
+			local msg = UnitName("raid1").." is afflicted by Surge of Mana."
+			print("Test: " .. msg)
+			self:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE", msg)
+		end },
+		{ time = 68.7, func = function()
+			local msg = UnitName("raid2").." is afflicted by Surge of Mana."
+			print("Test: " .. msg)
+			self:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE", msg)
+		end },
+		{ time = 70, func = function()
+			local msg = "Surge of Mana fades from you."
+			print("Test: " .. msg)
+			self:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_SELF", msg)
+		end },
+		{ time = 72, func = function()
+			local msg = "Surge of Mana fades from "..UnitName("raid1").."."
+			print("Test: " .. msg)
+			self:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_PARTY", msg)
+		end },
+		{ time = 73, func = function()
+			local msg = "Surge of Mana fades from "..UnitName("raid2").."."
+			print("Test: " .. msg)
+			self:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_OTHER", msg)
+		end },
+		{ time = 76, func = function()
+			local msg = "You are afflicted by Surge of Mana."
+			print("Test: " .. msg)
+			self:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
+		end },
+		{ time = 77, func = function()
+			local msg = UnitName("raid1").." is afflicted by Surge of Mana."
+			print("Test: " .. msg)
+			self:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE", msg)
+		end },
+		{ time = 79, func = function()
+			local msg = UnitName("raid1").." dies."
+			print("Test: " .. msg)
+			self:TriggerEvent("CHAT_MSG_COMBAT_FRIENDLY_DEATH", msg)
+		end },
+		{ time = 79.5, func = function()
+			local msg = "You die."
+			print("Test: " .. msg)
+			self:TriggerEvent("CHAT_MSG_COMBAT_FRIENDLY_DEATH", msg)
 		end },
 
-		{ time = 70, func = function()
+		{ time = 84, func = function()
 			print("Test: Disengage")
 			module:Disengage()
 		end },

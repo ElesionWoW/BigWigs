@@ -1,6 +1,6 @@
 local module, L = BigWigs:ModuleDeclaration("Kara Trash", "Karazhan")
 
-module.revision = 30002
+module.revision = 30003
 module.trashMod = true -- how does this affect things
 module.enabletrigger = { "Shadowclaw Rager", "Shadowclaw Darkbringer", "Manascale Suppressor", "Manascale Drake", "Unstable Arcane Elemental", "Disrupted Arcane Elemental", "Arcane Anomaly", "Lingering Arcanist", "Lingering Astrologist", "Lingering Magus", "Karazhan Protector Golem", "Crumbling Protector", "Warbringer Overseer" }
 module.toggleoptions = { "shadowclaw_enrage", "call_of_darkness", -1, "suppressor_crystal", "enrage_on_drake", "frigid_mana_breath", "draconic_thrash", -1, "mana_buildup", "unstable_mana", "overflowing_arcana", -1, "arcanist_blizzard", "astrologist_insight", "astrologist_rain", "magus_polymorph", "magus_flames", "golem_reflection", "protector_self_destruct", -1, "warbringer_shifted", -1, "printtrash" }
@@ -228,8 +228,6 @@ local syncName = {
 }
 
 function module:OnEnable()
-	self:RegisterEvent("CHAT_MSG_COMBAT_HOSTILE_DEATH")
-
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", "AfflictionEvent")
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE", "AfflictionEvent")
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE", "AfflictionEvent")
@@ -341,7 +339,7 @@ function module:EnemyCastEvent(msg)
 	end
 end
 
-function module:CHAT_MSG_COMBAT_HOSTILE_DEATH(msg)
+function module:OnEnemyDeath(msg)
 	if msg == string.format(UNITDIESOTHER, "Arcane Anomaly") then
 		self:TriggerEvent("BigWigs_StopCounterBar", self, L["bar_overflowing_arcana"])
 	end

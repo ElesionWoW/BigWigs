@@ -148,7 +148,7 @@ L:RegisterTranslations("enUS", function()
 		trigger_surgeFade = "Surge of Mana fades from (.+)%.",
 		trigger_surgeDeath = "(.+) die",
 		msg_surgeYou = "Surge of Mana on YOU!",
-		msg_surge = "Surge on %s",
+		msg_surge = "Surge on %s >Click Me!<",
 		warn_surge = "SURGE OF MANA",
 		yell_surge = "Help me! (Surge of Mana)",
 

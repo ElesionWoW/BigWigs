@@ -2,7 +2,7 @@ local module, L = BigWigs:ModuleDeclaration("Mephistroth", "Karazhan")
 
 module.revision = 30003
 module.enabletrigger = module.translatedName
-module.toggleoptions = { "shacklescast", "shacklesdebuff", "shackleshatter", -1, "shardscd", "shardschannel", "shardscount", -1, "doomduration", "markdoom", -1, "vampaura", "vampcorruption", -1, "fearcast", "bosskill" }
+module.toggleoptions = { "shacklescast", "shacklesdebuff", "shackleshatter", -1, "shardscd", "shardschannel", "shardscount", -1, "doomduration", "markdoom", -1, "nightmare", "marknightmare", -1, "vampaura", "vampcorruption", -1, "fearcast", "bosskill" }
 module.zonename = {
 	AceLibrary("AceLocale-2.2"):new("BigWigs")["Tower of Karazhan"],
 	AceLibrary("Babble-Zone-2.2")["Tower of Karazhan"],
@@ -22,6 +22,8 @@ module.defaultDB = {
 	shardscount = false,
 	doomduration = playerClass == "MAGE" or playerClass == "DRUID",
 	markdoom = true,
+	nightmare = false,
+	marknightmare = true,
 	vampaura = playerClass == "SHAMAN" or playerClass == "PRIEST",
 	vampcorruption = false,
 	fearcast = playerClass == "SHAMAN",
@@ -64,6 +66,14 @@ L:RegisterTranslations("enUS", function()
 		markdoom_name = "Mark Doom Target",
 		markdoom_desc = "Mark a Doomed player with Triangle.",
 
+		nightmare_cmd = "nightmare",
+		nightmare_name = "Waking Nightmare Alert",
+		nightmare_desc = "Show a warning message when a player falls asleep to Waking Nightmare (for OTs to pick up incoming Nightmare Crawlers).",
+
+		marknightmare_cmd = "marknightmare",
+		marknightmare_name = "Mark Waking Nightmare Target",
+		marknightmare_desc = "Mark the player sleeping due to Waking Nightmare with Moon (so OTs see where the next Nightmare Crawler will spawn).",
+
 		vampaura_cmd = "vampaura",
 		vampaura_name = "Vampiric Aura alert",
 		vampaura_desc = "Shows a purge alert whenever Vampiric Aura is up.",
@@ -88,6 +98,9 @@ L:RegisterTranslations("enUS", function()
 
 		trigger_doomDebuff = "(.+) ...? afflicted by Doom of Outland",
 		trigger_doomDebuffFade = "Doom of Outland fades from (.+)%.",
+
+		trigger_nightmareDebuff = "(.+) ...? afflicted by Waking Nightmare",
+		trigger_nightmareDebuffFade = "Waking Nightmare fades from (.+)%.",
 
 		trigger_vampiricAuraGain = "Mephistroth gains Vampiric Aura",
 		trigger_vampiricAuraFade = "Vampiric Aura fades from Mephistroth",
@@ -120,7 +133,9 @@ L:RegisterTranslations("enUS", function()
 		msg_shardsOver = "Shards Phase Over",
 		msg_shardsFail = "Shards Phase Failed - Unfathomed Hatred triggered",
 
-		bar_doom = "Doom on %s",
+		bar_doom = "Doom on %s >Decurse<",
+
+		msg_nightmare = "Crawler spawning on %s",
 
 		warning_vampiricAura = "Purge!",
 		bar_vampiricCorruption = "boss hasted",
@@ -165,6 +180,8 @@ local syncName = {
 	shardsChannelEnd = "MephistrothShardsOfHellfuryChannelEnd" .. module.revision,
 	doomGain = "MephistrothDoomGain" .. module.revision,
 	doomFade = "MephistrothDoomFade" .. module.revision,
+	nightmareGain = "MephistrothNightmareGain" .. module.revision,
+	nightmareFade = "MephistrothNightmareFade" .. module.revision,
 	vampiricAuraGain = "MephistrothVAGain" .. module.revision,
 	vampiricAuraFade = "MephistrothVAFade" .. module.revision,
 	vampiricCorruptionGain = "MephistrothVCGain" .. module.revision,
@@ -224,6 +241,8 @@ function module:OnEnable()
 	self:ThrottleSync(5, syncName.shardsChannelEnd)
 	self:ThrottleSync(5, syncName.doomGain)
 	self:ThrottleSync(5, syncName.doomFade)
+	self:ThrottleSync(5, syncName.nightmareGain)
+	self:ThrottleSync(5, syncName.nightmareFade)
 	self:ThrottleSync(5, syncName.vampiricAuraGain)
 	self:ThrottleSync(5, syncName.vampiricAuraFade)
 	self:ThrottleSync(5, syncName.vampiricCorruptionGain)
@@ -325,6 +344,14 @@ function module:DebuffEvent(msg)
 		self:Sync(syncName.doomGain .. " " .. player)
 		return
 	end
+
+	-- Waking Nightmare debuff
+	local _, _, player = string.find(msg, L.trigger_nightmareDebuff)
+	if player then
+		player = player == "You" and UnitName("player") or player
+		self:Sync(syncName.nightmareGain .. " " .. player)
+		return
+	end
 end
 
 function module:EnemyBuffEvent(msg)
@@ -367,6 +394,13 @@ function module:FadeEvent(msg)
 		self:Sync(syncName.doomFade .. " " .. player)
 	end
 	
+	-- Waking Nightmare fades from any player
+	local _, _, player = string.find(msg, L.trigger_nightmareDebuffFade)
+	if player then
+		player = player == "you" and UnitName("player") or player
+		self:Sync(syncName.nightmareFade .. " " .. player)
+	end
+	
 	-- Vampiric Aura fades from boss
 	if string.find(msg, L.trigger_vampiricAuraFade) then
 		self:Sync(syncName.vampiricAuraFade)
@@ -400,6 +434,11 @@ function module:BigWigs_RecvSync(sync, rest, nick)
 		self:DoomGain(rest)
 	elseif sync == syncName.doomFade and rest then
 		self:DoomFade(rest)
+
+	elseif sync == syncName.nightmareGain and rest then
+		self:NightmareGain(rest)
+	elseif sync == syncName.nightmareFade and rest then
+		self:NightmareFade(rest)
 
 	elseif sync == syncName.vampiricAuraGain then
 		if self.db.profile.vampaura then
@@ -524,6 +563,22 @@ function module:DoomFade(player)
 	end
 	
 	self:RemoveBar(string.format(L.bar_doom, player))
+end
+
+function module:NightmareGain(player)
+	if self.db.profile.marknightmare then
+		self:SetRaidTargetForPlayer(player, 5) -- white moon
+	end
+	
+	if self.db.profile.nightmare then
+		self:Message(string.format(L.msg_nightmare, player), "Magenta", true, "Murloc")
+	end
+end
+
+function module:NightmareFade(player)
+	if self.db.profile.marknightmare then
+		self:RestorePreviousRaidTargetForPlayer(player)
+	end
 end
 
 
@@ -688,6 +743,28 @@ function module:Test()
 		print("Test: " .. msg)
 		self:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_CREATURE_BUFFS",msg)
 	end, 3 + 72)
+
+	self:ScheduleEvent(self:ToString() .. "NightmareTest1", function()
+		local msg = UnitName("raid1").." is afflicted by Waking Nightmare."
+		print("Test: " .. msg)
+		self:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE", msg)
+	end, 3 + 74)
+	self:ScheduleEvent(self:ToString() .. "NightmareTest2", function()
+		local msg = "Waking Nightmare fades from "..UnitName("raid1").."."
+		print("Test: " .. msg)
+		self:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_OTHER", msg)
+	end, 3 + 77)
+
+	self:ScheduleEvent(self:ToString() .. "NightmareTest3", function()
+		local msg = "You are afflicted by Waking Nightmare."
+		print("Test: " .. msg)
+		self:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
+	end, 3 + 80)
+	self:ScheduleEvent(self:ToString() .. "NightmareTest4", function()
+		local msg = "Waking Nightmare fades from you."
+		print("Test: " .. msg)
+		self:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_SELF", msg)
+	end, 3 + 83)
 
 	-- Shard Spawn
 	self:ScheduleEvent(self:ToString() .. "ShardsCDTest2", function()

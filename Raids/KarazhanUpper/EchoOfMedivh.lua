@@ -46,8 +46,8 @@ L:RegisterTranslations("enUS", function()
 		corruptionyell_desc = "Makes corrupted players /say a warning",
 
 		corruptiontarget_cmd = "corruptiontarget",
-		corruptiontarget_name = "Corruption Target",
-		corruptiontarget_desc = "Auto-targets the Corruption victim",
+		corruptiontarget_name = "Corruption Target Bar",
+		corruptiontarget_desc = "Display a duration bar for Corruption victims other than yourself, that is clickable to target them (for healers)",
 
 		doom_cmd = "doom",
 		doom_name = "Doom of Medivh Alert",
@@ -104,7 +104,8 @@ L:RegisterTranslations("enUS", function()
 		msg_corruptionSpread = "Corruption is spreading!",
 		warning_corruptedGetAway = "CORRUPTED, GET AWAY",
 		yell_corruption = "I am corrupted! STAY AWAY!",
-		bar_corruption = "Corruption of Medivh",
+		bar_corruptionYou = "Corruption of Medivh",
+		bar_corruption = "Corruption on %s >Target<",
 
 		trigger_doomYou1 = "You are afflicted by Doom of Medivh%.",
 		trigger_doomYou = "You are afflicted by Doom of Medivh %((%d+)%)",
@@ -259,7 +260,7 @@ end
 
 function module:CHAT_MSG_SPELL_AURA_GONE_SELF(msg)
 	if string.find(msg, L["trigger_corruptionFade"]) then
-		self:RemoveBar(L["bar_corruption"])
+		self:RemoveBar(L["bar_corruptionYou"])
 	end
 
 	if string.find(msg, L["trigger_doomFade"]) then
@@ -372,7 +373,7 @@ function module:CorruptionOfMedivh(player)
 		if player == UnitName("player") then
 			self:Message(L["msg_corruptionYou"], "Important", true, "RunAway")
 			self:WarningSign(icon.corruption, 5, true, L["warning_corruptedGetAway"])
-			self:Bar(L["bar_corruption"], timer.corruption, icon.corruption)
+			self:Bar(L["bar_corruptionYou"], timer.corruption, icon.corruption)
 		else
 			self:Message(string.format(L["msg_corruptionOther"], player), "Important")
 		end
@@ -388,13 +389,20 @@ function module:CorruptionOfMedivh(player)
 		self:SetCorruptionMark(player)
 	end
 	
-	-- Auto-targeting if enabled
-	if self.db.profile.corruptiontarget then
-		TargetByName(player,true)
+	-- Display bar with on-click target if enabled
+	if self.db.profile.corruptiontarget and player ~= UnitName("player") then
+		local barText = string.format(L["bar_corruption"], player)
+		self:Bar(barText, timer.corruption, icon.corruption, true, "Black")
+		
+		self:SetCandyBarOnClick("BigWigsBar " .. barText, function(name, button, playerName)
+			TargetByName(playerName, true)
+		end, player)
 	end
 end
 
 function module:CorruptionFade(player)
+	-- Cancel any potentially existing bar
+	self:RemoveBar(string.format(L["bar_corruption"], player))
 	-- Restore previous raid mark if enabled
 	if self.db.profile.corruptionmark then
 		self:RestoreMark(player)
@@ -523,15 +531,15 @@ function module:Test()
 		end },
 
 		-- Corruptions start to fade
-		{ time = 17, func = function()
+		{ time = 15.5, func = function()
 			local member = UnitName("raid1") or "Player1"
-			print("Test: Corruption of Medivh fades from " .. member)
+			print("Test: Corruption of Medivh fades late from " .. member)
 			module:FadesEvent("Corruption of Medivh fades from " .. member)
 		end },
 
-		{ time = 18, func = function()
+		{ time = 16.5, func = function()
 			local member = UnitName("raid2") or "Player2"
-			print("Test: Corruption of Medivh fades from " .. member)
+			print("Test: Corruption of Medivh fades early from " .. member)
 			module:FadesEvent("Corruption of Medivh fades from " .. member)
 		end },
 
@@ -597,26 +605,29 @@ function module:Test()
 			local member = UnitName("raid4") or "Player4"
 			print("Test: " .. member .. " is afflicted by Corruption of Medivh")
 			module:AfflictionEvent(member .. " is afflicted by Corruption of Medivh")
+		end },
 
+		{ time = 37, func = function()
+			local member = UnitName("raid4") or "Player4"
 			print("Test: " .. member .. " dies. Also Fury triggers.")
 			module:CHAT_MSG_COMBAT_FRIENDLY_DEATH(member .. " dies")
-			
+
 			module:CHAT_MSG_SPELL_PERIODIC_CREATURE_BUFFS("Echo of Medivh gains Medivh's Fury.")
 			module:FadesEvent("Guardian's Ire fades from Echo of Medivh")
 		end },
-		
+
 		-- Arcane Focus on tank
-		{ time = 37, func = function()
+		{ time = 38, func = function()
 			local member = UnitName("raid5") or "Player5"
 			print("Test: " ..member.." is afflicted by Arcane Focus")
 			module:AfflictionEvent(member .. " is afflicted by Arcane Focus")
 		end },
-		
+
 		{ time = 40, func = function()
 			print("Test: Echo of Medivh gains Medivh's Fury (2).")
 			module:CHAT_MSG_SPELL_PERIODIC_CREATURE_BUFFS("Echo of Medivh gains Medivh's Fury (2).")
 		end },
-		
+
 		{ time = 41, func = function()
 			print("Test: You are afflicted by Flamestrike.")
 			module:AfflictionEvent("You are afflicted by Flamestrike.")

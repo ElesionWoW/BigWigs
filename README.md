@@ -10,11 +10,10 @@ Big updates to K40 and MC (**check your boss settings!**), small fixes and updat
 * Rupturan - alert when you stand in fire
 * Mephistroth - Doom bar, purge alert, better Shards handling, sound cue on Shackle fade
 ## Future Ideas
+* Dire Maul North - Alert on Eye summoning (similar to Stratholme).
 * Ragnaros - Identify the current tank, mark them, alert on tank knock-back.
-* Echo - Add duration bar for intitial Corruption victim (clickable to target).
 * Chess - Keep track of major piece health and announce every % below 5.
 * Sanv Tas'dal - Make Overflowing Hatred cast bar accurate.
-* Mephistroth - Identify the sleep target and mark them to indicate Crawler spawn point for OTs.
 * Add support for forking, allowing for independed version numbers.
 ## Karazhan 40 - Full Changelog
 Relative to pepopo978's BigWigs.
@@ -52,7 +51,6 @@ Relative to pepopo978's BigWigs.
 * Added warning on Unstable Magic floor zones and support for soaking them when Dampening is active (default: on). Special warning for Bomb + floor zone (always on).
 * Print Troubleshoot Info (default: off): Bomb gains, deaths to floor zones
 ### Echo of Medivh
-* Added auto-targeting of Corruption targets (default: off).
 * Added Potion Strategy (default: off) for staggered bars/messages to time Restorative Potion and other dispels correctly. Yells for emergency dispel 2 seconds after general dispel if you still have Doom.
 * Added Guardian's Ire stack counter with time-out bar (default: off) for interrupters.
 * Added various boss cast warnings for interrupters (all default: off): Frost Nova, Shadow Bolt, Pyroblast, Flamestrike.
@@ -61,6 +59,7 @@ Relative to pepopo978's BigWigs.
 * Added Flamestrike warning (default: on).
 * Corruption Alert displays an additional warning if spreads are happening.
 * Print Troubleshoot Info (default: off): Corruption gains (not throttled), successful Shadow Bolt casts
+* Added duration bar for Corruption victim (clickable to target; default: off) for assigned healers.
 ### Chess
 * Added handling for Knight's Glory. The bar for the King's Fury cast time is shortened if applied. The warning sign is now displayed for the same duration as the cast time as well.
 * Added warning for Knight's Glory (default: off) due to Knight proximity to Bishop or King so tanks can reposition.
@@ -90,6 +89,7 @@ Relative to pepopo978's BigWigs.
 * Reworked Shards handling: Added cast bar to incoming Shards. 120s CD bar split into 90s hard CD and 30s spawn window. Based Shard count on Shard death instead of channel fail (which may happen due to other reasons). Added counter for Shards remaining (default: off). Added messages for Shard phase win (6 shards dead) and fail (boss casting Unfathomed Hatred) for clarity.
 * Tattle option also prints to the default chat window.
 * Added alternate triggers to greatly reduce the reliance on SuperWoW cast events.
+* Added mark (default: on) and alert with sound cue (default: off) about the current Waking Nightmare target to indicate Crawler spawn point for OTs.
 
 Kruul is unchanged for now.
 

@@ -1,3 +1,4 @@
+# BigWigs Golden Edition
 Big updates to K40 and MC (**check your boss settings!**), small fixes and updates here and there. Mostly tested.
 ## Karazhan 40 - Highlights
 * Trash - many additional mobs and mechanics (including "don't move" and "don't cast")
@@ -11,10 +12,7 @@ Big updates to K40 and MC (**check your boss settings!**), small fixes and updat
 * Mephistroth - Doom bar, purge alert, better Shards handling, sound cue on Shackle fade
 ## Future Ideas
 * Dire Maul North - Alert on Eye summoning (similar to Stratholme).
-* Ragnaros - Identify the current tank, mark them, alert on tank knock-back.
 * Chess - Keep track of major piece health and announce every % below 5.
-* Sanv Tas'dal - Make Overflowing Hatred cast bar accurate.
-* Add support for forking, allowing for independed version numbers.
 ## Karazhan 40 - Full Changelog
 Relative to pepopo978's BigWigs.
 ### General

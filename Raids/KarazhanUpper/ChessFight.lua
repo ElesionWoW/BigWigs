@@ -26,7 +26,7 @@ module.defaultDB = {
 	charmingpresence = playerClass == "SHAMAN",
 	markmindcontrol = true,
 	queensfury = false,
-  shieldbashbar = false,
+	shieldbashbar = false,
 	knightsglory = false,
 	bishoptonguesalert = true,
 	bishopvolley = true,
@@ -87,6 +87,10 @@ L:RegisterTranslations("enUS", function()
 		queensfury_name = "Queen's Fury Magnitude",
 		queensfury_desc = "Warns about the current magnitude of Queen's Fury (ramping-up aoe in phase 3)",
 
+		shieldbashbar_cmd = "shieldbashbar",
+		shieldbashbar_name = "Shield Bash CD Bar",
+		shieldbashbar_desc = "Shows a cooldown bar for Rook's Shield Bash",
+
 		knightsglory_cmd = "knightsglory",
 		knightsglory_name = "Knight's Glory Alert",
 		knightsglory_desc = "Warns when King or Bishop gain Knight's Glory (15yd proximity aura, +50% cast speed)",
@@ -110,11 +114,6 @@ L:RegisterTranslations("enUS", function()
 
 		trigger_kingCastFury = "King begins to cast King(.+)Fury", -- they used special character apostrophe for this and queen's Fury
 		trigger_voidzone = "King casts Blunder.",
-
-		shieldbashbar_cmd = "shieldbashbar",
-		shieldbashbar_name = "Shield Bash Timer Bar",
-		shieldbashbar_desc = "Shows a timer bar for Rook's Shield Bash",
-		bar_shieldbash = "Shield Bash",
 
 		trigger_subservienceYou = "You are afflicted by Dark Subservience",
 		trigger_subservienceOther = "(.+) is afflicted by Dark Subservience",
@@ -174,6 +173,8 @@ L:RegisterTranslations("enUS", function()
 
 		trigger_kingsFuryHit = "Fury hits (.+) for (.+) Holy damage.",
 		trigger_subservienceHit = "(.+) suffers (.+) Shadow damage from Queen's Dark Subservience",
+		
+		bar_shieldbash = "Shield Bash CD",
 	}
 end)
 
@@ -187,7 +188,7 @@ local timer = {
 	voidzone = 2, -- duration for void zone warning sign
 	sbvolley = 3, --base cast time of Shadow Bolt Volley
 	cursecd = {41,50}, --based on logs, removing outliers directly after Fury
-  shieldbash = 11, -- rook shield bash cooldown
+	shieldbash = 11, -- rook shield bash cooldown
 }
 
 local icon = {
@@ -197,7 +198,7 @@ local icon = {
 	kingscurse = "Spell_Shadow_GrimWard", -- icon for King's curse
 	voidzone = "spell_shadow_antishadow", -- icon for void zone
 	sbvolley = "Spell_Shadow_ShadowBolt",
-  shieldbash = "Ability_Warrior_ShieldBash", -- icon for shield bash
+	shieldbash = "Ability_Warrior_ShieldBash", -- icon for shield bash
 }
 
 local kingsCurseTexture = "Interface\\Icons\\Spell_Shadow_GrimWard"
@@ -219,7 +220,7 @@ local syncName = {
 	bishopTonguesFade = "ChessBishopTonguesFade" .. module.revision,
 	sbvolleyCast = "ChessSbvolleyCast" .. module.revision,
 	curseHappened = "ChessCurseHappened" .. module.revision,
-  shieldbash = "ChessShieldBash" .. module.revision,
+	shieldbash = "ChessShieldBash" .. module.revision,
 }
 
 local spellIds = {
@@ -311,7 +312,7 @@ function module:OnEnable()
 	self:ThrottleSync(2, syncName.bishopTonguesFade)
 	self:ThrottleSync(5, syncName.sbvolleyCast)
 	self:ThrottleSync(5, syncName.curseHappened)
-  self:ThrottleSync(5, syncName.shieldbash)
+	self:ThrottleSync(5, syncName.shieldbash)
 end
 
 function module:OnSetup()
@@ -334,9 +335,7 @@ function module:OnEngage()
 
 	self.queenTarget = ""
 
-	if self.db.profile.shieldbashbar then
-		self:Bar(L["bar_shieldbash"], timer.shieldbash, icon.shieldbash)
-	end
+	self:ShieldBash()
 end
 
 function module:OnDisengage()
@@ -1026,7 +1025,7 @@ function module:Test()
 		end },
 
 		-- Second Shield Bash (11s after first)
-		{ time = 49, func = function()
+		{ time = 48, func = function()
 			print("Test: Rook casts Shield Bash")
 			module:ShieldBash()
 		end },

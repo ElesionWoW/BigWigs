@@ -24,43 +24,43 @@ L:RegisterTranslations("enUS", function() return {
 	emerge_cmd = "emerge",
 	emerge_name = "Emerge Alert",
 	emerge_desc = "Warn for Ragnaros Emerge",
-	
+
 	wrathofragnaros_cmd = "wrathofragnaros",
 	wrathofragnaros_name = "Wrath of Ragnaros (Knockback) Alert",
 	wrathofragnaros_desc = "Warn for Wrath of Ragnaros Knockback",
-	
+
 	lava_cmd = "lava",
 	lava_name = "Touching Lava Alert",
 	lava_desc = "Warn for Touching Lava",
-	
+
 	adds_cmd = "adds",
 	adds_name = "Son of Flame Dies Alert",
 	adds_desc = "Warn for Son of Flame Deaths",
-	
+
 	melt_cmd = "melt",
 	melt_name = "Melt Weapon Alert",
 	melt_desc = "Warn for Melt Weapon",
-	
+
 	elementalfire_cmd = "elementalfire",
 	elementalfire_name = "Elemental Fire Bars",
 	elementalfire_desc = "Show a duration bar for all current victims of Elemental Fire",
-	
+
 	tankalert_cmd = "tankalert",
 	tankalert_name = "Tank Swap Alert",
 	tankalert_desc = "Warning message whenever the character receiving melee hits changes",
-	
+
 	tankwrathhit_cmd = "tankwrathhit",
 	tankwrathhit_name = "Tank Knockback Alert",
 	tankwrathhit_desc = "Warns when the current tank gets knocked back by Wrath of Ragnaros",
-	
+
 	tankwrathresist_cmd = "tankwrathresist",
 	tankwrathresist_name = "Tank Knockback Resist",
 	tankwrathresist_desc = "Confirms that the current tank resisted Wrath of Ragnaros' knockback",
-	
+
 	tankmark_cmd = "tankmark",
 	tankmark_name = "Tank Mark",
 	tankmark_desc = "Marks the current tank with Skull, clears mark on knockback",
-	
+
 
 		--74.137
 	trigger_domoStart1 = "Imprudent whelps! You've rushed headlong to your own deaths! See now, the master stirs!", --CHAT_MSG_MONSTER_YELL
@@ -81,36 +81,36 @@ L:RegisterTranslations("enUS", function() return {
 	trigger_submerge2 = "YOU CANNOT DEFEAT THE LIVING FLAME! COME YOU MINIONS OF FIRE! COME FORTH YOU CREATURES OF HATE! YOUR MASTER CALLS!", --CHAT_MSG_MONSTER_YELL (to be confirmed)
 	bar_nextEmerge = "Emerge",
 	msg_submerge = "Ragnaros Submerged - Incoming Sons of Flame!",
-	
+
 	msg_emergeSoon = "Emerge in 10 seconds!",
 	msg_emerge = "Ragnaros Emerged!",
-	
+
 		--melee knockback
 	trigger_knockback = "TASTE THE FLAMES OF SULFURON!", --CHAT_MSG_MONSTER_YELL
 	bar_knockbackCd = "Knockback CD",
 	bar_knockbackSoon = "Knockback Soon...",
 	msg_knockbackSoon = "Knockback Soon - Melee Out!",
 	msg_knockback = "Knockback - Melee In!",
-	
+
 	trigger_lavaYou = "You lose (.+) health for swimming in lava.", --CHAT_MSG_COMBAT_SELF_HITS
 	msg_lavaYou = "You're standing in lava!",
 
 	msg_addDead = "/10 Son of Flame Dead",
-	
+
 	trigger_meltWeapon = "Ragnaros casts Melt Weapon on you: (.+) damaged.", --CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE
 	bar_melt = "Melt Damage: ",
-	
+
 	trigger_elementalFireYou = "You are afflicted by Elemental Fire.", --CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE
 	trigger_elementalFireOther = "(.+) is afflicted by Elemental Fire.", --CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE //CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE
 	trigger_elementalFireFade = "Elemental Fire fades from (.+).", --CHAT_MSG_SPELL_AURA_GONE_SELF // CHAT_MSG_SPELL_AURA_GONE_PARTY // CHAT_MSG_SPELL_AURA_GONE_OTHER
 	bar_elementalFire = "%s - Elemental Fire",
-	
+
 	trigger_hitCrit = "Ragnaros .-its (.+) for",
 	trigger_miss = "Ragnaros misses (.+)%.",
 	trigger_dodgeParry = "Ragnaros attacks. (.+) .-%.$",
 	msg_newTank = "%s is tanking",
 	msg_youTank = "YOU are tanking",
-	
+
 	trigger_wrathHit = "Wrath of Ragnaros hits (.+) for",
 	trigger_wrathResist = "Wrath of Ragnaros was resisted by (.+)%.",
 	trigger_wrathResistYou = "Wrath of Ragnaros was resisted%.",
@@ -129,39 +129,32 @@ local timer = {
 
 	knockbackCd = 25, --supposed to be 25,30
 	knockbackSoon = 8,
+
+	elementalFire = 8,
 }
 local icon = {
 	domoStart = "inv_misc_pocketwatch_01",
-
 	emerge = "ability_stealth",
-
 	knockback = "ability_smash",
-
 	lava = "spell_fire_fire",
-
+	elementalFire = "spell_fire_flametounge",
 	melt = "inv_sword_36",
 }
 local color = {
 	domoStart = "White",
-
 	emerge = "White",
-
 	knockbackCd = "Black",
 	knockbackSoon = "Cyan",
-
+	elementalFire = "Red",
 	melt = "Yellow",
 }
 local syncName = {
 	submerge = "RagnarosSubmerge"..module.revision,
 	emerge = "RagnarosEmerge"..module.revision,
-
 	knockback = "RagnarosKnockback"..module.revision,
-
 	addDead = "RagnarosSonDead"..module.revision,
-	
 	elementalFire = "RagnarosElementalFire"..module.revision,
 	elementalFireFade = "RagnarosElementalFireFade"..module.revision,
-	
 	newTank = "RagnarosNewTank"..module.revision,
 	tankWrathHit = "RagnarosTankWrathHit"..module.revision,
 	tankWrathResist = "RagnarosTankWrathResist"..module.revision,

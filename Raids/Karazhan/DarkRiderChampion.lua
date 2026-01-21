@@ -6,7 +6,7 @@ module.enabletrigger = module.translatedName
 module.toggleoptions = {"reaverstorm"}
 module.trashMod = true
 module.zonename = {
-	AceLibrary("AceLocale-2.2"):new("BigWigs")["Tower of Karazhan"],
+	AceLibrary("AceLocale-2.2"):new("BigWigs")["Lower Karazhan Halls"],
 	AceLibrary("Babble-Zone-2.2")["Tower of Karazhan"],
 }
 

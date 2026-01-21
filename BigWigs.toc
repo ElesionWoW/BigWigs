@@ -162,6 +162,7 @@ Raids\MC\Surger.lua
 Raids\MC\CoreHound.lua
 
 Raids\DireMaul\CaptainKromcrush.lua
+Raids\DireMaul\EyeOfKilrogg.lua
 Raids\DireMaul\Gordok.lua
 
 Raids\Other\Azuregos.lua

@@ -1,6 +1,6 @@
 local module, L = BigWigs:ModuleDeclaration("Rupturan the Broken", "Karazhan")
 
-module.revision = 30003
+module.revision = 30004
 module.enabletrigger = module.translatedName
 module.toggleoptions = { "livingstone", "dirtmound", "dirtmoundmark", "flamestrike", "flamestrikemove", "reform", "bosskill" }
 module.zonename = {
@@ -201,7 +201,7 @@ end
 
 function module:CastEvent(msg)
 	if string.find(msg, L.trigger_igniterock) then
-		self:Sync(syncName.igniteRock .. " " .. spellIds.igniteRock)
+		self:Sync(syncName.igniteRock .. " " .. timer.igniteRock)
 	end
 	if string.find(msg, L.trigger_reform) then
 		self:Sync(syncName.reform)

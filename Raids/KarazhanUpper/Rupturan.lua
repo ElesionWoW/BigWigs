@@ -2,7 +2,7 @@ local module, L = BigWigs:ModuleDeclaration("Rupturan the Broken", "Karazhan")
 
 module.revision = 30004
 module.enabletrigger = module.translatedName
-module.toggleoptions = { "livingstone", "dirtmound", "dirtmoundmark", "flamestrike", "flamestrikemove", "reform", "bosskill" }
+module.toggleoptions = { "boulderalert", "bouldermark", "bouldersay", "livingstone", "opportunity", -1, "igniteearth", "dirtmound", "dirtmoundmark", -1, "flamestrike", "flamestrikemove", "felheartalert", "felheartbar", "reform", "bosskill" }
 module.zonename = {
 	AceLibrary("AceLocale-2.2"):new("BigWigs")["Tower of Karazhan"],
 	AceLibrary("Babble-Zone-2.2")["Tower of Karazhan"],
@@ -10,13 +10,22 @@ module.zonename = {
 	"The Rock of Desolation",
 }
 
+local _, playerClass = UnitClass("player")
+
 module.defaultDB = {
-	livingstone     = true,
-	dirtmound       = true,
-	dirtmoundmark   = false,
-	flamestrike     = true,
+	boulderalert = false,
+	bouldermark = true,
+	bouldersay = true,
+	livingstone = true,
+	opportunity = true,
+	igniteearth = false,
+	dirtmound = true,
+	dirtmoundmark = false,
+	flamestrike = true,
 	flamestrikemove = true,
-	reform          = true,
+	felheartalert = true,
+	felheartbar = playerClass == "HUNTER" or playerClass == "PRIEST" or playerClass == "WARLOCK",
+	reform = true,
 }
 
 -------------------------------------------------------------------------------
@@ -25,31 +34,62 @@ module.defaultDB = {
 L:RegisterTranslations("enUS", function() return {
 	-- Options
 	cmd = "Rupturan",
-	livingstone_cmd      = "livingstone",
-	livingstone_name     = "Living Stone Stomp",
-	livingstone_desc     = "Show time left until a Living Stone stomp after Crash Landing fades.",
 
-	dirtmound_cmd        = "dirtmound",
-	dirtmound_name       = "Dirt Mound Indicators",
-	dirtmound_desc       = "Warn when Dirt Mound Quake hits you and when one is spawned.",
+	boulderalert_cmd = "boulderalert",
+	boulderalert_name = "Throw Boulder Alert",
+	boulderalert_desc = "Gives a warning message with the target of an incoming Boulder.",
+	
+	bouldermark_cmd = "bouldermark",
+	bouldermark_name = "Throw Boulder Mark",
+	bouldermark_desc = "Mark the target of an incoming Boulder with Moon.",
+	
+	bouldersay_cmd = "bouldersay",
+	bouldersay_name = "Throw Boulder Say",
+	bouldersay_desc = "Alert your surroundings with a /say message if you are the target of an incoming Boulder.",
 
-	dirtmoundmark_cmd    = "dirtmoundmark",
-	dirtmoundmark_name   = "Mark Dirt Mound Target",
-	dirtmoundmark_desc   = "Mark the player Dirt Mound is chasing with a Diamond.",
+	livingstone_cmd = "livingstone",
+	livingstone_name = "Living Stone Stomp",
+	livingstone_desc = "Show time left until a Living Stone stomp after Crash Landing fades.",
 
-	flamestrike_cmd      = "flamestrike",
-	flamestrike_name     = "Flamestrike Cast",
-	flamestrike_desc     = "Warn when Flamestrike (Ignite Rock) is casting.",
+	opportunity_cmd = "opportunity",
+	opportunity_name = "Window of Opportunity",
+	opportunity_desc = "Warns about remaining or incoming Living Stones below 10% boss HP to avoid Explode mechanic (when the boss dies the remaining Living Stones detonate)",
 
-	flamestrikemove_cmd      = "flamestrikemove",
-	flamestrikemove_name     = "Flamestrike Alert",
-	flamestrikemove_desc     = "Warns when you stand in fire (Ignite Rock).",
+	igniteearth_cmd  = "igniteearth",
+	igniteearth_name = "Ignite Earth",
+	igniteearth_desc = "Show cooldown and cast bar for Ignite Earth (P1 flamestrike)",
 
-	reform_cmd           = "reform",
-	reform_name          = "Reform Timer",
-	reform_desc          = "When you kill a Fragment, show show time left until Rupturan will be reformed.",
+	dirtmound_cmd = "dirtmound",
+	dirtmound_name = "Dirt Mound Indicators",
+	dirtmound_desc = "Warn when Dirt Mound Quake hits you and when one is spawned.",
+
+	dirtmoundmark_cmd  = "dirtmoundmark",
+	dirtmoundmark_name = "Mark Dirt Mound Target",
+	dirtmoundmark_desc = "Mark the player Dirt Mound is chasing with a Diamond.",
+
+	flamestrike_cmd = "flamestrike",
+	flamestrike_name = "Flamestrike Cast",
+	flamestrike_desc = "Warn when Flamestrike (Ignite Rock) is casting.",
+
+	flamestrikemove_cmd = "flamestrikemove",
+	flamestrikemove_name = "Flamestrike Alert",
+	flamestrikemove_desc = "Warns when you stand in fire (Ignite Rock).",
+
+	felheartalert_cmd = "felheartalert",
+	felheartalert_name = "Felheart Mana Alert",
+	felheartalert_desc = "Warns when Felheart has >80% mana (5 second CD).",
+
+	felheartbar_cmd = "felheartbar",
+	felheartbar_name = "Felheart Mana Bar",
+	felheartbar_desc = "Adds a continuously updating mana bar for Felheart.",
+
+	reform_cmd = "reform",
+	reform_name = "Reform Timer",
+	reform_desc = "When you kill a Fragment, show show time left until Rupturan will be reformed.",
 
 	-- Bars / Messages
+	bar_ignite_earth_CD  = "Ignite Earth CD",
+	bar_ignite_earth     = "Ignite Earth casting",
 	bar_ignite_rock      = "Flamestrike casting",
 	warn_ignite_rock     = "Incoming!",
 	msg_flamestrike      = "Move out of Flamestrike!",
@@ -59,14 +99,28 @@ L:RegisterTranslations("enUS", function() return {
 	msg_dm_target_near   = "Get away from %s!",
 	msg_dm_target_you    = "Dirt Mound chasing you!",
 	bar_reform           = "Rupturan Reforming",
+	msg_boulder          = "Boulder casting on %s",
+	msg_boulderMiss      = "Boulder missed, no add",
+	say_boulder          = "Boulder incoming on me!",
+	bar_window           = "Window of Opportunity",
+	msg_windowOpen       = "Kill Rupturan! - all Stones dead",
+	msg_windowClosing    = "Stone incoming!",
+	msg_windowClosed     = "Stone alive! DON'T kill Rupturan",
+	msg_felheartMana     = "Felheart at %s%% mana!",
 
 	-- Triggers
 	trigger_start        = "All shall crumble",
 	trigger_phase2       = "Let the cracks of this world destroy you",
 	trigger_boss_dead    = "Perished... To dust",
+	unit_felheart        = "Felheart",
 
+	trigger_tb_cast      = "Rupturan the Broken begins to perform Throw Boulder",
+	trigger_tb_hit       = "Rupturan the Broken's Throw Boulder hits (.+) for",
+	trigger_tb_miss      = "Rupturan the Broken's Throw Boulder missed (.+)%.",
 	trigger_ls_fades     = "Crash Landing fades from Living Stone",
-	trigger_dm_quake     = "Dirt Mound's Quake .?.its (.+) for",
+	trigger_ls_die       = "Living Stone dies",
+	trigger_igniteearth  = "Rupturan the Broken begins to cast Ignite Earth",
+	trigger_dm_quake     = "Dirt Mound's Quake hits you for",
 	trigger_dm_spawn     = "Rupturan commands the earth to crush (.+)!",
 	trigger_dm_die       = "Dirt Mound dies",
 	trigger_flamestrike  = "You are afflicted by Ignite Rock",
@@ -75,35 +129,57 @@ L:RegisterTranslations("enUS", function() return {
 } end)
 
 local timer = {
+	boulderCast = 2,
+	boulderCD = {13,16}, -- lowest 12.6, highest 16.8
 	earthstomp = 5,
+	igniteEarthCast = 3,
+	igniteEarthCD = {15,19}, -- interval based on logs, rarely 14, mostly 16
 	igniteRockCD = {20,53},
 	igniteRock = 3,
 	reform = 10,
 }
 
 local icon = {
-	earthstomp = "Ability_ThunderClap",
-	quake      = "Spell_Nature_Earthquake",
-	igniteRock = "Spell_Fire_SelfDestruct",
-	fire       = "Spell_Fire_Fire", -- warning when standing in Ignite Rock (confusing if same icon as incoming cast)
-	reform     = "Spell_Nature_AstralRecalGroup",
+	earthstomp	= "Ability_ThunderClap",
+	quake		= "Spell_Nature_Earthquake",
+	igniteEarth	= "Spell_Fire_Immolation",
+	igniteRock	= "Spell_Fire_SelfDestruct",
+	fire		= "Spell_Fire_Fire", -- warning when standing in Ignite Rock (confusing if same icon as incoming cast)
+	reform		= "Spell_Nature_AstralRecalGroup",
+	window		= "INV_Misc_PocketWatch_01",
+	felheart	= "Spell_Holy_PrayerOfFortitude",
 }
 
 local syncName = {
-	earthstomp   = "RupturanEarthStomp"..module.revision,
-	igniteRock   = "RupturanIgniteRock"..module.revision,
-	dm_spawn     = "RupturanDirtMoundSpawn"..module.revision,
-	phase2       = "RupturanPhaseTwo"..module.revision,
-	reform       = "RupturanReform"..module.revision,
+	earthstomp = "RupturanEarthStomp"..module.revision,
+	igniteEarth = "RupturanIgniteEarth"..module.revision,
+	igniteRock = "RupturanIgniteRock"..module.revision,
+	dm_spawn = "RupturanDirtMoundSpawn"..module.revision,
+	phase2 = "RupturanPhaseTwo"..module.revision,
+	reform = "RupturanReform"..module.revision,
+	throwBoulderCast = "RupturanThrowBoulderCast"..module.revision,
+	throwBoulderOutcome = "RupturanThrowBoulderOutcome"..module.revision,
+	livingStoneDeath = "RupturanLivingStoneDeath"..module.revision,
 }
 
 local spellIds = {
-	igniteRock = 51298,
-	reform     = 51299,
+	igniteEarth		= 52040,
+	throwBoulder	= 51289,
+	igniteRock		= 51298,
+	reform			= 51299,
 }
 
--- keep track of which player currently has popcorn
+local guid = {
+	rupturan = "0xF13000EA39073D35",
+	felheart = nil,
+}
+
+-- keep track of players to later reset raid marks, and active Living Stones
 local mound_chasing = nil
+local boulder_victim = nil
+local last_boulder = 0
+local active_living_stones = 0
+local last_mana_warn = 0
 
 -------------------------------------------------------------------------------
 --  Initialization
@@ -115,8 +191,10 @@ function module:OnEnable()
 	-- Living Stone stomp countdown
 	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_OTHER", "Event")
 
-	-- Quake damage landed on you
-	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE", "Event")
+	-- Quake damage, Throw Boulder
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE", "SpellEvent")
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_PARTY_DAMAGE", "SpellEvent")
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE", "SpellEvent") -- also non-SuperWoW Ignite Earth & Ignite Rock cast
 
 	-- Dirt Mound spawn target announcement (emote)
 	self:RegisterEvent("CHAT_MSG_RAID_BOSS_EMOTE", "Event")
@@ -130,14 +208,18 @@ function module:OnEnable()
 	if SUPERWOW_VERSION or SetAutoloot then
 		self:RegisterEvent("UNIT_CASTEVENT")
 	else
-		self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE", "CastEvent") -- Ignite Rock cast
-		self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_BUFF", "CastEvent") -- Reform cast
+		self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_BUFF", "SpellEvent") -- Reform cast
 	end
 
 	self:ThrottleSync(2, syncName.earthstomp)
+	self:ThrottleSync(4, syncName.igniteEarth)
+	self:ThrottleSync(1, syncName.igniteRock)
 	self:ThrottleSync(2, syncName.dm_spawn)
 	self:ThrottleSync(2, syncName.phase2)
 	self:ThrottleSync(1, syncName.reform)
+	self:ThrottleSync(5, syncName.throwBoulderCast)
+	self:ThrottleSync(5, syncName.throwBoulderOutcome)
+	self:ThrottleSync(0.5, syncName.livingStoneDeath)
 end
 
 -- function module:OnSetup()
@@ -145,12 +227,21 @@ end
 
 function module:OnEngage()
 	mound_chasing = nil
+	boulder_victim = nil
+	last_boulder = 0
+	active_living_stones = 0
+	last_mana_warn = 0
 end
 
 function module:OnDisengage()
 	-- clean up bars
 	self:RemoveBar(L.bar_ls_earthstomp)
+	self:CancelDelayedBar(L.bar_ignite_earth_CD)
+	self:RemoveBar(L.bar_ignite_earth_CD)
 	self:RestorePreviousRaidTargetForPlayer(mound_chasing)
+	self:RestorePreviousRaidTargetForPlayer(boulder_victim)
+	self:CancelScheduledEvent("RupturanFindFelheart")
+	self:CancelScheduledEvent("RupturanCheckFelheart")
 end
 
 -------------------------------------------------------------------------------
@@ -163,18 +254,11 @@ function module:Event(msg)
 		self:Sync(syncName.earthstomp)
 		return
 	end
-	if self.db.profile.dirtmound then
-		-- Quake hit on you
-		if string.find(msg, L.trigger_dm_quake) then
-			self:DirtMoundQuake() -- personal damage, no syncing
-			return
-		end
-		-- Dirt Mound spawn emote: capture player name
-		local _,_,player = string.find(msg, L.trigger_dm_spawn)
-		if player then
-			self:Sync(syncName.dm_spawn .. " " .. player)
-			return
-		end
+	-- Dirt Mound spawn emote: capture player name
+	local _,_,player = string.find(msg, L.trigger_dm_spawn)
+	if player then
+		self:Sync(syncName.dm_spawn .. " " .. player)
+		return
 	end
 	if string.find(msg, L.trigger_phase2) then
 		self:Sync(syncName.phase2)
@@ -191,20 +275,86 @@ function module:Event(msg)
 end
 
 function module:UNIT_CASTEVENT(caster,target,action,spellId,castTime)
+	if spellId == spellIds.igniteEarth and action == "START" then
+		self:Sync(syncName.igniteEarth .. " " .. (castTime / 1000))
+		return
+	end
+	if spellId == spellIds.throwBoulder and action == "START" then
+		self:Sync(syncName.throwBoulderCast .. " " .. UnitName(target))
+		return
+	end
 	if spellId == spellIds.igniteRock and action == "START" then
 		self:Sync(syncName.igniteRock .. " " .. (castTime / 1000))
+		return
 	end
 	if spellId == spellIds.reform and action == "START" then
 		self:Sync(syncName.reform)
+		return
 	end
 end
 
-function module:CastEvent(msg)
-	if string.find(msg, L.trigger_igniterock) then
-		self:Sync(syncName.igniteRock .. " " .. timer.igniteRock)
+function module:SpellEvent(msg)
+	-- non-SuperWoW Ignite Earth cast
+	if string.find(msg, L.trigger_igniteearth) and not SUPERWOW_VERSION then
+		self:Sync(syncName.igniteEarth .. " " .. timer.igniteEarthCast)
+		return
 	end
+
+	-- Quake hit on you
+	if string.find(msg, L.trigger_dm_quake) then
+		self:DirtMoundQuake() -- personal damage, no syncing
+		return
+	end
+
+	-- Throw Boulder cast
+	if string.find(msg, L.trigger_tb_cast) and not SUPERWOW_VERSION then
+		self:ScheduleEvent("RupturanDelayedTargetCheck", self.DelayedTargetCheck, 0.2, self)
+		return
+	end
+	
+	-- Throw Boulder hit
+	local _,_,player = string.find(msg, L.trigger_tb_hit)
+	if player then
+		player = player == "you" and UnitName("player") or player
+		if player == boulder_victim then
+			self:Sync(syncName.throwBoulderOutcome .. " hit")
+		end
+		return
+	end
+	
+	-- Throw Boulder miss
+	local _,_,player = string.find(msg, L.trigger_tb_miss)
+	if player then
+		player = player == "you" and UnitName("player") or player
+		if player == boulder_victim then
+			self:Sync(syncName.throwBoulderOutcome .. " miss")
+		end
+		return
+	end
+
+	-- non-SuperWoW Ignite Rock cast
+	if string.find(msg, L.trigger_igniterock) and not SUPERWOW_VERSION  then
+		self:Sync(syncName.igniteRock .. " " .. timer.igniteRock)
+		return
+	end
+
+	-- non-SuperWoW Reform cast
 	if string.find(msg, L.trigger_reform) then
 		self:Sync(syncName.reform)
+		return
+	end
+end
+
+function module:OnEnemyDeath(msg)
+	if string.find(msg, L.trigger_ls_die) then
+		self:Sync(syncName.livingStoneDeath)
+	end
+end
+
+function module:DelayedTargetCheck()
+	local target = BigWigs:GetTargetByName(module.translatedName, 1)
+	if target then
+		self:Sync(syncName.throwBoulderCast .. " " .. target)
 	end
 end
 
@@ -215,6 +365,10 @@ end
 function module:BigWigs_RecvSync(sync, rest, nick)
 	if sync == syncName.earthstomp then
 		self:CrashLandingFades()
+
+	elseif sync == syncName.igniteEarth and rest then
+		local castTime = tonumber(rest)
+		self:IgniteEarth(castTime)
 
 	elseif sync == syncName.dm_spawn and rest then
 		self:DirtMoundSpawn(rest)
@@ -228,6 +382,16 @@ function module:BigWigs_RecvSync(sync, rest, nick)
 
 	elseif sync == syncName.reform then
 		self:Reform()
+
+	elseif sync == syncName.throwBoulderCast and rest then
+		self:ThrowBoulder(rest)
+
+	elseif sync == syncName.throwBoulderOutcome and rest then
+		self:ThrowBoulderOutcome(rest)
+
+	elseif sync == syncName.livingStoneDeath then
+		active_living_stones = active_living_stones - 1
+		self:CheckOpportunity()
 	end
 end
 
@@ -236,6 +400,21 @@ function module:CrashLandingFades()
 
 	self:Sound("Alarm")
 	self:Bar(L.bar_ls_earthstomp, timer.earthstomp, icon.earthstomp)
+end
+
+function module:IgniteEarth(castTime)
+	if not self.db.profile.igniteearth then return end
+	castTime = castTime or timer.igniteEarthCast
+
+	-- Remove any ongoing CD bar
+	self:CancelDelayedBar(L.bar_ignite_earth_CD)
+	self:RemoveBar(L.bar_ignite_earth_CD)
+
+	-- Put up cast bar
+	self:Bar(L.bar_ignite_earth, castTime, icon.igniteEarth)
+	self:Sound("Info")
+	-- Schedule CD bar to show after cast finishes
+	self:DelayedIntervalBar(castTime, L.bar_ignite_earth_CD, timer.igniteEarthCD[1]-castTime, timer.igniteEarthCD[2]-castTime, icon.igniteEarth, true, "ItemQuality0")
 end
 
 function module:DirtMoundQuake()
@@ -273,9 +452,15 @@ function module:DirtMoundSpawn(player)
 end
 
 function module:Phase2()
+	-- cancel P1 bars
+	self:CancelDelayedBar(L.bar_ignite_earth_CD)
+	self:RemoveBar(L.bar_ignite_earth_CD)
+	self:RemoveBar(L.bar_window)
 	-- clear popcorn mark
 	self:RestorePreviousRaidTargetForPlayer(mound_chasing)
 	mound_chasing = nil
+	-- start looking for Felheart
+	self:FindFelheart()
 end
 
 function module:IgniteRock(castTime)
@@ -293,6 +478,100 @@ function module:Reform()
 	self:Bar(L.bar_reform, timer.reform, icon.reform)
 end
 
+function module:ThrowBoulder(targetName)
+	boulder_victim = targetName
+	last_boulder = GetTime()
+	
+	if self.db.profile.boulderalert then
+		self:Message(string.format(L.msg_boulder, targetName), "Attention")
+	end
+
+	if self.db.profile.bouldermark then
+		self:SetRaidTargetForPlayer(targetName, "Moon")
+	end
+
+	if targetName == UnitName("player") and self.db.profile.bouldersay then
+		SendChatMessage(L.say_boulder, "SAY")
+	end
+	
+	if self:GetHealth() <= 15 and self.db.profile.opportunity then
+		self:Bar(L.bar_window, timer.boulderCast - 0.3, icon.window, true, "White")
+		if not self.db.profile.boulderalert then -- don't double up on messages
+			self:Message(L.msg_windowClosing, "Urgent", true, "Beware")
+		end
+	end
+end
+
+function module:ThrowBoulderOutcome(outcome)
+	if outcome == "hit" then
+		active_living_stones = active_living_stones + 1
+		if self:GetHealth() <= 15 and self.db.profile.opportunity then
+			self:RemoveBar(L.bar_window)
+			self:Message(L.msg_windowClosed, "Important", true, "Alert")
+		end
+	end
+
+	if outcome == "miss" then
+		if self.db.profile.boulderalert then
+			self:Message(L.msg_boulderMiss, "Positive", true, "Long")
+		end
+		if boulder_victim == UnitName("player") and self.db.profile.bouldersay then
+			SendChatMessage(L.msg_boulderMiss, "SAY")
+		end
+		self:CheckOpportunity()
+	end
+
+	-- clear victim
+	self:RestorePreviousRaidTargetForPlayer(boulder_victim)
+	boulder_victim = nil
+end
+
+function module:GetHealth()
+	local health = 100 -- set to 9 to test window of opportunity
+	if UnitExists(guid.rupturan) then
+		health = math.floor((UnitHealth(guid.rupturan)/UnitHealthMax(guid.rupturan)) * 100)
+	end
+	return health
+end
+
+function module:CheckOpportunity()
+	if self:GetHealth() > 15 or (not self.db.profile.opportunity) then return end
+
+	local windowHigh = last_boulder + timer.boulderCD[2] + timer.boulderCast - GetTime()
+	if active_living_stones == 0 and windowHigh > 3 then
+		self:Bar(L.bar_window, windowHigh, icon.window, true, "White")
+		self:Message(L.msg_windowOpen, "Positive")
+	end
+end
+
+function module:FindFelheart()
+	local found = BigWigs:GetGUIDByName(L.unit_felheart, 1)
+	if found then
+		guid.felheart = found
+		if self.db.profile.felheartalert then
+			self:ScheduleRepeatingEvent("RupturanCheckFelheart", self.CheckFelheart, 0.5, self)
+		end		
+		if self.db.profile.felheartbar then
+			self:MonitorBar("Felheart Mana", icon.felheart, guid.felheart, "mana", L.unit_felheart)
+		end
+	else
+		self:ScheduleEvent("RupturanFindFelheart", self.FindFelheart, 0.5, self)
+	end
+end
+
+function module:CheckFelheart()
+	if self.db.profile.felheartalert and guid.felheart and UnitExists(guid.felheart) then
+		local percent = math.ceil(UnitMana(guid.felheart)/UnitManaMax(guid.felheart) * 100)
+		if percent >= 80 and last_mana_warn + 5 < GetTime() then
+			self:Message(string.format(L.msg_felheartMana, percent), "Core", true, "Beware")
+			last_mana_warn = GetTime()
+		end
+	else
+		-- if alert disabled or Felheart doesn't currently exist stop checking
+		self:CancelScheduledEvent("RupturanCheckFelheart")
+	end
+end
+
 -------------------------------------------------------------------------------
 --  Testing
 -------------------------------------------------------------------------------
@@ -300,20 +579,40 @@ end
 function module:Test()
 	local print = function (s) DEFAULT_CHAT_FRAME:AddMessage(s) end
 	BigWigs:EnableModule(self:ToString())
+	self:RegisterEvent("UNIT_CASTEVENT")
 
 	local player = UnitName("player")
+	local _,playerGuid = UnitExists("player")
+	local raid1 = UnitName("player") or "Raid1"
+	local raid2 = UnitName("player") or "Raid2"
 	local tests = {
 		-- after  1s, simulate the “Crash Landing fades from Living Stone” fade event
 		{0,
 		"Engage:",
 		"CHAT_MSG_MONSTER_YELL",
 		"All shall crumble... To dust."},
-		{3,
+		{0.5,
+		"First Ignite Earth:",
+		"CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE",
+		"Rupturan the Broken begins to cast Ignite Earth."},
+		{1,
+		"First Throw Boulder:",
+		"UNIT_CASTEVENT",
+		{"caster",playerGuid,"START",spellIds.throwBoulder,2000} },
+		{4,
+		"Boulder Hits:",
+		"CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE",
+		"Rupturan the Broken's Throw Boulder hits you for 1351."},
+		{5,
 		"Crash Land test:",
 		"CHAT_MSG_SPELL_AURA_GONE_OTHER",
 		"Crash Landing fades from Living Stone."},
+		{7,
+		"Living Stone dies:",
+		"CHAT_MSG_COMBAT_HOSTILE_DEATH",
+		"Living Stone dies."},
 		-- after  2s, simulate the quake damage event
-		{8,
+		{11,
 		"Quake damage test:",
 		"CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE",
 		"Dirt Mound's Quake hits you for 717 Nature damage."},
@@ -322,15 +621,26 @@ function module:Test()
 		"Emote player test:",
 		"CHAT_MSG_RAID_BOSS_EMOTE",
 		"Rupturan commands the earth to crush "..player.."!"},
+		{14,
+		"Second Throw Boulder:",
+		"UNIT_CASTEVENT",
+		{"caster",playerGuid,"START",spellIds.throwBoulder,2000} },
 		{16,
+		"Boulder Misses:",
+		"CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE",
+		"Rupturan the Broken's Throw Boulder missed you."},
+		{17,
 		"Emote raid1 test:",
 		"CHAT_MSG_RAID_BOSS_EMOTE",
-		"Rupturan commands the earth to crush "..UnitName("raid1").."!"},
-		-- after  4s, simulate the same on “Bob”
-		{19,
+		"Rupturan commands the earth to crush "..raid1.."!"},
+		{18,
+		"Second Ignite Earth:",
+		"CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE",
+		"Rupturan the Broken begins to cast Ignite Earth."},
+		{20,
 		"Emote raid2 test:",
 		"CHAT_MSG_RAID_BOSS_EMOTE",
-		"Rupturan commands the earth to crush "..UnitName("raid2").."!"},
+		"Rupturan commands the earth to crush "..raid2.."!"},
 		{22,
 		"Phase 2 change:",
 		"CHAT_MSG_MONSTER_YELL",
@@ -389,3 +699,6 @@ function module:Test()
 	return true
 end
 -- /run BigWigs:GetModule("Rupturan the Broken"):Test()
+
+-- to test the Window of Opportunity functionality set health inside GetHealth() temporarily to 9
+-- no test for Felheart mana alert and mana bar available

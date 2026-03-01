@@ -391,12 +391,7 @@ function module:CorruptionOfMedivh(player)
 	
 	-- Display bar with on-click target if enabled
 	if self.db.profile.corruptiontarget and player ~= UnitName("player") then
-		local barText = string.format(L["bar_corruption"], player)
-		self:Bar(barText, timer.corruption, icon.corruption, true, "Black")
-		
-		self:SetCandyBarOnClick("BigWigsBar " .. barText, function(name, button, playerName)
-			TargetByName(playerName, true)
-		end, player)
+		self:ClickBar(string.format(L["bar_corruption"], player), timer.corruption, icon.corruption, player, false, true, "Black")
 	end
 end
 

@@ -59,8 +59,10 @@ L:RegisterTranslations("enUS", function()
 		trigger_causeInsanityOther = "(.+) is afflicted by Cause Insanity.", --CHAT_MSG_SPELL_PERIODIC_HOSTILEPLAYER_DAMAGE // CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE // CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE
 		trigger_causeInsanityFade = "Cause Insanity fades from (.+).", --CHAT_MSG_SPELL_AURA_GONE_SELF // CHAT_MSG_SPELL_AURA_GONE_PARTY // CHAT_MSG_SPELL_AURA_GONE_OTHER
 		trigger_causeInsanityTotem = "Hakkar's Cause Insanity fails. Grounding Totem is immune.", --CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE // CHAT_MSG_SPELL_CREATURE_VS_PARTY_DAMAGE
-		msg_causeInsanity = " MC",
-		bar_causeInsanity = " MC",
+		msg_causeInsanity = " Mind-Controlled!",
+		bar_causeInsanity = (playerClass=="MAGE" and " MC >sheep<") or (playerClass=="WARLOCK" and " MC >fear<") or " MC >target<",
+		spell_causeInsanity = (playerClass=="MAGE" and "Polymorph") or (playerClass=="WARLOCK" and "Fear") or false,
+		bar_causeInsanityGrounded = "MC Grounded",
 		bar_causeInsanityCd = "MC CD",
 
 		trigger_bloodSiphon = "Hakkar gains Blood Siphon.", --CHAT_MSG_SPELL_PERIODIC_CREATURE_BUFFS
@@ -437,22 +439,13 @@ function module:CauseInsanity(rest)
 	self:RemoveBar(L["bar_causeInsanityCd"])
 
 	if rest == "Grounded!" then
-		self:Bar("Grounded -" .. L["bar_causeInsanity"], timer.causeInsanityDur, icon.causeInsanity, true, color.causeInsanityDur)
+		self:Bar(L["bar_causeInsanityGrounded"], timer.causeInsanityDur, icon.causeInsanity, true, color.causeInsanityDur)
 		self:DelayedBar(timer.causeInsanityDur, L["bar_causeInsanityCd"], timer.causeInsanityCd, icon.causeInsanity, true, color.causeInsanityCd)
 	else
-		self:Bar(rest .. L["bar_causeInsanity"] .. " >Click Me<", timer.causeInsanityDur, icon.causeInsanity, true, color.causeInsanityDur)
-		self:SetCandyBarOnClick("BigWigsBar " .. rest .. L["bar_causeInsanity"] .. " >Click Me<", function(name, button, extra)
-			TargetByName(extra, true)
-			if playerClass == "MAGE" then
-				CastSpellByName("Polymorph")
-			elseif playerClass == "WARLOCK" then
-				CastSpellByName("Fear")
-			end
-		end, rest)
-
+		self:ClickBar(rest .. L["bar_causeInsanity"], timer.causeInsanityDur, icon.causeInsanity, rest, L["spell_causeInsanity"], true, color.causeInsanityDur)
+		
 		if playerClass == "MAGE" or playerClass == "WARLOCK" then
-			self:Message(rest .. L["msg_causeInsanity"], "Attention", false, nil, false)
-			self:Sound("Info")
+			self:Message(rest .. L["msg_causeInsanity"], "Attention", false, "Info", false)
 			self:WarningSign(icon.causeInsanity, 0.7)
 		end
 
@@ -467,7 +460,7 @@ function module:CauseInsanity(rest)
 end
 
 function module:CauseInsanityFade(rest)
-	self:RemoveBar(rest .. L["bar_causeInsanity"] .. " >Click Me<")
+	self:RemoveBar(rest .. L["bar_causeInsanity"])
 
 	if (IsRaidLeader() or IsRaidOfficer()) then
 		for i = 1, GetNumRaidMembers() do

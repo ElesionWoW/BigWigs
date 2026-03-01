@@ -28,7 +28,6 @@ module.defaultDB = {
 	mapY = 400,
 	mapAlpha = 1,
 	mapScale = 1,
-	autotarget = false,
 	window = false,
 }
 
@@ -142,9 +141,9 @@ L:RegisterTranslations("enUS", function()
 		trigger_digestiveAcid = "You are afflicted by Digestive Acid %((.+)%).", --CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE
 		msg_digestiveAcid = " Acid Stacks - Consider getting out of the Stomach",
 
-		hpBar_firstTentacle = "First Tentacle",
-		hpBar_secondTentacle = "Second Tentacle",
+		unit_fleshTentacle = "Flesh Tentacle",
 		msg_firstTentacleDead = "First Tentacle Dead",
+		msg_secondTentacleLow = "Second Tentacle at %s%% HP",
 
 		frameHeader_playersInStomach = "Players in Stomach",
 	}
@@ -197,7 +196,7 @@ local icon = {
 
 	digestiveAcid = "ability_creature_disease_02",
 
-	stomachTentacle = "inv_misc_ahnqirajtrinket_05",
+	stomachTentacle = "INV_Misc_AhnQirajTrinket_05",
 }
 local color = {
 	startRandomBeams = "Cyan",
@@ -243,6 +242,10 @@ local syncName = {
 
 	firstStomachTentacleDead = "CThunFleshTentacleDead2" .. module.revision,
 }
+local guid = {
+	stomachL = nil,
+	stomachR = nil,
+}
 
 module.proximityCheck = function(unit)
 	return CheckInteractDistance(unit, 2)
@@ -257,8 +260,6 @@ local lastEyeTarget = nil
 
 local firstStomachTentacleDead = nil
 local secondTentacleLowWarn = nil
-local firstTentacleHP = 100
-local secondTentacleHP = 100
 
 local smallEyeDead = 0
 local smallEyeDeadCounter = 8
@@ -328,8 +329,6 @@ function module:OnEngage()
 
 	firstStomachTentacleDead = nil
 	secondTentacleLowWarn = nil
-	firstTentacleHP = 100
-	secondTentacleHP = 100
 
 	smallEyeDead = 0
 	smallEyeDeadCounter = 8
@@ -382,7 +381,8 @@ function module:OnDisengage()
 	self:CancelScheduledEvent("CthunDarkGlare")
 	self:CancelScheduledEvent("CThunDelayedEyeBeamCheck")
 	self:CancelScheduledEvent("CthunCheckTarget")
-	self:CancelScheduledEvent("CThunCheckTentacleHP")
+	self:CancelScheduledEvent("CthunFindFleshTentacle")
+	self:CancelScheduledEvent("CthunCheckFleshTentacles")
 end
 
 function module:MINIMAP_ZONE_CHANGED(msg)
@@ -402,8 +402,6 @@ function module:ResetModule()
 
 	firstStomachTentacleDead = nil
 	secondTentacleLowWarn = nil
-	firstTentacleHP = 100
-	secondTentacleHP = 100
 
 	smallEyeDead = 0
 	smallEyeDeadCounter = 8
@@ -417,7 +415,8 @@ function module:ResetModule()
 	self:CancelScheduledEvent("CthunDarkGlare")
 	self:CancelScheduledEvent("CThunDelayedEyeBeamCheck")
 	self:CancelScheduledEvent("CthunCheckTarget")
-	self:CancelScheduledEvent("CThunCheckTentacleHP")
+	self:CancelScheduledEvent("CthunFindFleshTentacle")
+	self:CancelScheduledEvent("CthunCheckFleshTentacles")
 end
 
 function module:CHAT_MSG_COMBAT_HOSTILE_DEATH(msg)
@@ -432,7 +431,7 @@ function module:CHAT_MSG_COMBAT_HOSTILE_DEATH(msg)
 	elseif (msg == string.format(UNITDIESOTHER, "Giant Eye Tentacle")) then
 		self:Sync(syncName.window)
 
-	elseif (msg == string.format(UNITDIESOTHER, "Flesh Tentacle")) and not firstStomachTentacleDead then
+	elseif (msg == string.format(UNITDIESOTHER, L["unit_fleshTentacle"])) and not firstStomachTentacleDead then
 		self:Sync(syncName.firstStomachTentacleDead)
 
 	elseif (msg == string.format(UNITDIESOTHER, "Eye Tentacle")) then
@@ -456,45 +455,6 @@ function module:CHAT_MSG_MONSTER_EMOTE(msg)
 		self:Sync(syncName.weakened)
 	end
 end
-
---[[
-function module:UNIT_HEALTH(msg)
-	if UnitName(msg) == "Flesh Tentacle" then
-		local healthPct = UnitHealth(msg) * 100 / UnitHealthMax(msg)
-
-		if secondTentacleLowWarn == true and healthPct >= 20 then
-			secondTentacleLowWarn = nil
-			firstTentacleHP = 1
-			secondTentacleHP = 100
-			self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_firstTentacle"], 100 - firstTentacleHP)
-			self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_secondTentacle"], 100 - secondTentacleHP)
-		end
-
-		if not firstStomachTentacleDead then
-			if healthPct < firstTentacleHP then
-				firstTentacleHP = healthPct
-				self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_firstTentacle"], 100 - firstTentacleHP)
-				self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_secondTentacle"], 100 - secondTentacleHP)
-			elseif healthPct > firstTentacleHP and healthPct < secondTentacleHP then
-				secondTentacleHP = healthPct
-				self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_firstTentacle"], 100 - firstTentacleHP)
-				self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_secondTentacle"], 100 - secondTentacleHP)
-			end
-		elseif firstStomachTentacleDead then
-			firstTentacleHP = 1
-			if healthPct < secondTentacleHP then
-				secondTentacleHP = healthPct
-				self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_firstTentacle"], 100 - firstTentacleHP)
-				self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_secondTentacle"], 100 - secondTentacleHP)
-			end
-			if secondTentacleHP <= 20 and not secondTentacleLowWarn then
-				self:Message("Second Tentacle at "..secondTentacleHP.."% HP")
-				secondTentacleLowWarn = true
-			end
-		end
-	end
-end
-]]--
 
 function module:Event(msg)
 	if msg == L["trigger_cthun_eyeBeam"] then
@@ -603,6 +563,7 @@ function module:DelayedEyeBeamCheck()
 		self:Bar(L["bar_eyeBeam"] .. name, timer.eyeBeamCast - 0.1, icon.giantEye, true, color.eyeBeam)
 	end
 end
+
 function module:CheckTarget()
 	local newtarget = nil
 	local enemy = "Eye of C'Thun"
@@ -718,15 +679,8 @@ function module:Phase2()
 	if self.db.profile.stomachhp then
 		firstStomachTentacleDead = nil
 		secondTentacleLowWarn = nil
-		firstTentacleHP = 100
-		secondTentacleHP = 100
 
-		self:TriggerEvent("BigWigs_StartHPBar", self, L["hpBar_firstTentacle"], 100, "Interface\\Icons\\" .. icon.stomachTentacle, true, color.stomachTentacle)
-		self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_firstTentacle"], 0)
-		self:TriggerEvent("BigWigs_StartHPBar", self, L["hpBar_secondTentacle"], 100, "Interface\\Icons\\" .. icon.stomachTentacle, true, color.stomachTentacle)
-		self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_secondTentacle"], 0)
-
-		self:ScheduleRepeatingEvent("CThunCheckTentacleHP", self.CheckTentacleHP, 0.5, self)
+		self:ScheduleEvent("CthunFindFleshTentacle", self.FindFleshTentacle, 12, self)
 	end
 
 	if self.db.profile.stomachplayers then
@@ -766,10 +720,8 @@ end
 function module:Weakened()
 	firstStomachTentacleDead = nil
 	secondTentacleLowWarn = nil
-	firstTentacleHP = 100
-	secondTentacleHP = 100
-	self:TriggerEvent("BigWigs_StopHPBar", self, L["hpBar_firstTentacle"])
-	self:TriggerEvent("BigWigs_StopHPBar", self, L["hpBar_secondTentacle"])
+	self:RemoveBar("stomachL")
+	self:RemoveBar("stomachR")
 
 	self:CancelDelayedMessage(L["msg_smallEyeTentaclesSoon"])
 	self:CancelDelayedSound("Alert")
@@ -777,6 +729,8 @@ function module:Weakened()
 
 	self:RemoveBar(L["bar_giantEye"])
 	self:RemoveBar(L["bar_giantClaw"])
+
+	self:CancelScheduledEvent("CthunCheckFleshTentacles")
 
 	if self.db.profile.weakened then
 		self:Message(L["msg_weakened"], "Positive", false, nil, false)
@@ -808,13 +762,8 @@ function module:WeakenedOver()
 	if self.db.profile.stomachhp then
 		firstStomachTentacleDead = nil
 		secondTentacleLowWarn = nil
-		firstTentacleHP = 100
-		secondTentacleHP = 100
 
-		self:TriggerEvent("BigWigs_StartHPBar", self, L["hpBar_firstTentacle"], 100, "Interface\\Icons\\" .. icon.stomachTentacle, true, color.stomachTentacle)
-		self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_firstTentacle"], 0)
-		self:TriggerEvent("BigWigs_StartHPBar", self, L["hpBar_secondTentacle"], 100, "Interface\\Icons\\" .. icon.stomachTentacle, true, color.stomachTentacle)
-		self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_secondTentacle"], 0)
+		self:ScheduleEvent("CthunFindFleshTentacle", self.FindFleshTentacle, 12, self)
 	end
 end
 
@@ -829,56 +778,54 @@ function module:FleshTentacleDead()
 		secondTentacleLowWarn = nil
 
 		self:Message(L["msg_firstTentacleDead"], "Important", false, nil, false)
-
-		firstTentacleHP = 1
-		secondTentacleHP = 100
-		self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_firstTentacle"], 100 - firstTentacleHP)
-		self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_secondTentacle"], 100 - secondTentacleHP)
 	end
 end
 
-function module:CheckTentacleHP()
-	local health
-	if UnitName("Target") == "Flesh Tentacle" and not UnitIsDeadOrGhost("Target") then
-		health = math.floor(UnitHealth("Target") / UnitHealthMax("Target") * 100)
+function module:FindFleshTentacle()
+	local found = BigWigs:GetGUIDByName(L["unit_fleshTentacle"], 1)
+	if found then
+		self:GetSecondFleshTentacle(found)
 	else
-		for i = 1, GetNumRaidMembers() do
-			if UnitName("Raid" .. i .. "Target") == "Flesh Tentacle" and not UnitIsDeadOrGhost("Raid" .. i .. "Target") then
-				health = math.floor(UnitHealth("Raid" .. i .. "Target") / UnitHealthMax("Raid" .. i .. "Target") * 100)
-				break
-			end
-		end
+		self:ScheduleEvent("CthunFindFleshTentacle", self.FindFleshTentacle, 0.5, self)
+	end
+end
+
+function module:GetSecondFleshTentacle(firstGUID)
+	local minus = BigWigs:OffsetGUID(firstGUID,-1)
+	local plus = BigWigs:OffsetGUID(firstGUID,1)
+	if minus and UnitExists(minus) and UnitName(minus) == L["unit_fleshTentacle"] then
+		guid.stomachL = firstGUID
+		guid.stomachR = minus
+	elseif plus and UnitExists(plus) and UnitName(plus) == L["unit_fleshTentacle"] then
+		guid.stomachL = plus
+		guid.stomachR = firstGUID
+	else
+		-- inferring the second tentacle from consecutive GUIDs is elegant, but possibly not 100% reliable?
+		print("Unable to find a second Flesh Tentacle - Please submit a bug report on Github!")
+		return
 	end
 
-	if secondTentacleLowWarn == true and health and health >= 20 then
-		secondTentacleLowWarn = nil
-		firstTentacleHP = 1
-		secondTentacleHP = 100
-		self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_firstTentacle"], 100 - firstTentacleHP)
-		self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_secondTentacle"], 100 - secondTentacleHP)
+	self:MonitorBar("stomachL", icon.stomachTentacle, guid.stomachL, "health", "Left")
+	self:MonitorBar("stomachR", icon.stomachTentacle, guid.stomachR, "health", "Right")
+	self:ScheduleRepeatingEvent("CthunCheckFleshTentacles", self.CheckFleshTentacles, 0.5, self)
+end
+
+function module:CheckFleshTentacles()
+	if secondTentacleLowWarn or not firstStomachTentacleDead then
+		return
 	end
 
-	if not firstStomachTentacleDead then
-		if health and health < firstTentacleHP then
-			firstTentacleHP = health
-			self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_firstTentacle"], 100 - firstTentacleHP)
-			self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_secondTentacle"], 100 - secondTentacleHP)
-		elseif health and health > firstTentacleHP and health < secondTentacleHP then
-			secondTentacleHP = health
-			self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_firstTentacle"], 100 - firstTentacleHP)
-			self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_secondTentacle"], 100 - secondTentacleHP)
-		end
-	elseif firstStomachTentacleDead then
-		firstTentacleHP = 1
-		if health and health < secondTentacleHP then
-			secondTentacleHP = health
-			self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_firstTentacle"], 100 - firstTentacleHP)
-			self:TriggerEvent("BigWigs_SetHPBar", self, L["hpBar_secondTentacle"], 100 - secondTentacleHP)
-		end
-		if secondTentacleHP <= 20 and not secondTentacleLowWarn then
-			self:Message("Second Tentacle at " .. secondTentacleHP .. "% HP")
-			secondTentacleLowWarn = true
-		end
+	local guidSecond
+	if UnitExists(guid.stomachL) and not UnitIsDead(guid.stomachL) then
+		guidSecond = guid.stomachL
+	elseif UnitExists(guid.stomachR) and not UnitIsDead(guid.stomachR) then
+		guidSecond = guid.stomachR
+	end
+
+	local percent = UnitHealth(guidSecond) / UnitHealthMax(guidSecond) * 100
+	if percent <= 20 then
+		self:Message(string.format(L["msg_secondTentacleLow"],percent), "Urgent")
+		secondTentacleLowWarn = true
 	end
 end
 

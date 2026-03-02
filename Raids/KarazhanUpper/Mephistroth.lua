@@ -2,7 +2,7 @@ local module, L = BigWigs:ModuleDeclaration("Mephistroth", "Karazhan")
 
 module.revision = 30003
 module.enabletrigger = module.translatedName
-module.toggleoptions = { "shacklescast", "shacklesdebuff", "shackleshatter", -1, "shardscd", "shardschannel", "shardscount", -1, "doomduration", "markdoom", -1, "nightmare", "marknightmare", -1, "vampaura", "vampcorruption", -1, "fearcast", "bosskill" }
+module.toggleoptions = { "shacklescast", "shacklesdebuff", "shacklescd", "shackleshatter", -1, "shardscd", "shardschannel", "shardscount", -1, "doomduration", "markdoom", -1, "nightmare", "marknightmare", -1, "vampaura", "vampcorruption", -1, "fearcast", "fearcd", "bosskill" }
 module.zonename = {
 	AceLibrary("AceLocale-2.2"):new("BigWigs")["Tower of Karazhan"],
 	AceLibrary("Babble-Zone-2.2")["Tower of Karazhan"],
@@ -16,6 +16,7 @@ local _, playerClass = UnitClass("player")
 module.defaultDB = {
 	shacklescast = true,
 	shacklesdebuff = true,
+	shacklescd = true,
 	shackleshatter = false,
 	shardscd = true,
 	shardschannel = true,
@@ -27,6 +28,7 @@ module.defaultDB = {
 	vampaura = playerClass == "SHAMAN" or playerClass == "PRIEST",
 	vampcorruption = false,
 	fearcast = playerClass == "SHAMAN",
+	fearcd = false,
 }
 
 L:RegisterTranslations("enUS", function()
@@ -40,7 +42,11 @@ L:RegisterTranslations("enUS", function()
 
 		shacklesdebuff_cmd = "shacklesdebuff",
 		shacklesdebuff_name = "Shackles Debuff Alert",
-		shacklesdebuff_desc = "Warn and timer when Shackles of the Legion lands.",
+		shacklesdebuff_desc = "Warning and duration timer when Shackles of the Legion lands",
+
+		shacklescd_cmd = "shacklescd",
+		shacklescd_name = "Shackles CD Timer",
+		shacklescd_desc = "Show timer for the minimum Shackles CD",
 
 		shackleshatter_cmd = "shackleshatter",
 		shackleshatter_name = "Shackle Shatter Tattle",
@@ -86,6 +92,10 @@ L:RegisterTranslations("enUS", function()
 		fearcast_name = "Nathrezim Terror cast",
 		fearcast_desc = "Shows an alert and a cast bar for incoming Nathrezim Terror (fear).",
 
+		fearcd_cmd = "fearcd",
+		fearcd_name = "Nathrezim Terror CD Timer",
+		fearcd_desc = "Shows a fading CD bar after each Nathrezim Terror cast.",
+
 		-- triggers
 		trigger_engage = "I foresaw your arrival", -- CHAT_MSG_MONSTER_YELL
 
@@ -122,6 +132,8 @@ L:RegisterTranslations("enUS", function()
 		msg_shacklesDebuffYou = "You are shackled! >>DO NOT MOVE<<",
 		msg_shacklesDebuffOther = "%s is shackled!",
 
+		bar_shacklesCD = "Shackles on CD",
+
 		msg_shackleShatter = " didn't keep still.",
 
 		bar_shardsChannel = "Shard Enrage",
@@ -133,7 +145,8 @@ L:RegisterTranslations("enUS", function()
 		msg_shardsOver = "Shards Phase Over",
 		msg_shardsFail = "Shards Phase Failed - Unfathomed Hatred triggered",
 
-		bar_doom = "Doom on %s >Decurse<",
+		bar_doom = (playerClass=="MAGE" and "Doom on %s >decurse<") or (playerClass=="DRUID" and "Doom on %s >decurse<") or "Doom on %s",
+		spell_doom = (playerClass=="MAGE" and "Remove Lesser Curse") or (playerClass=="DRUID" and "Remove Curse") or false,
 
 		msg_nightmare = "Crawler spawning on %s",
 
@@ -142,12 +155,13 @@ L:RegisterTranslations("enUS", function()
 
 		msg_fearCast = "Fear incoming!",
 		bar_fearCast = "Fear casting!",
+		bar_fearCD = "Fear on CD",
 	}
 end)
 
 local timer = {
 	shacklesInitialCD = { 68, 96 }, -- 60 to 120 ?
-	shacklesCD = { 40, 70 },
+	shacklesCD = { 40, 60 }, -- from logs: 40s to 60s cast-to-cast
 	shacklesCast = 2.5,
 	shacklesDebuff = 6,
 	shardsCast = 6,
@@ -159,6 +173,8 @@ local timer = {
 	vampiricAura = 15,
 	vampiricCorruption = 15,
 	fearCast = 2.5,
+	fearDuration = 5,
+	fearCD = { 26, 52 }, -- DCV-2142: 25 to 47; Elesion 29 to 56
 }
 
 local icon = {
@@ -452,10 +468,7 @@ function module:BigWigs_RecvSync(sync, rest, nick)
 		end
 
 	elseif sync == syncName.fearCast then
-		if self.db.profile.fearcast then
-			self:Message(L.msg_fearCast, "Core")
-			self:Bar(L.bar_fearCast, timer.fearCast, icon.fear, true, "Cyan")
-		end
+		self:NathrezimTerror()
 	end
 end
 
@@ -463,12 +476,19 @@ end
 --  Alerts & Bars
 --------------------------------------------------------------------------------
 function module:ShacklesCast(castTime)
-	if not self.db.profile.shacklescast then
-		return
+	-- remove any current or future CD bars
+	self:CancelDelayedBar(L.bar_shacklesCD)
+	self:RemoveBar(L.bar_shacklesCD)
+	
+	if self.db.profile.shacklescast then
+		self:Sound("Beware")
+		self:WarningSign(icon.shackles, castTime, true, L.msg_shacklesCastAlert)
+		self:Bar(L.bar_shacklesCast, castTime, icon.shackles, true, "Red")
 	end
-	self:Sound("Beware")
-	self:WarningSign(icon.shackles, castTime, true, L.msg_shacklesCastAlert)
-	self:Bar(L.bar_shacklesCast, castTime, icon.shackles, true, "Red")
+	if self.db.profile.shacklescd then
+		local delay = timer.shacklesCast + timer.shacklesDebuff + 1
+		self:DelayedIntervalBar(delay, L.bar_shacklesCD, timer.shacklesCD[1]-delay, timer.shacklesCD[2]-delay, icon.shackles, true, "Black")
+	end
 end
 
 function module:ShacklesDebuff(player)
@@ -523,37 +543,9 @@ function module:DoomGain(player)
 	if self.db.profile.markdoom then
 		self:SetRaidTargetForPlayer(player, 4) -- green triangle
 	end
-	
+
 	if self.db.profile.doomduration then
-		local barText = string.format(L.bar_doom, player)
-		self:Bar(barText, timer.doom, icon.doom, true, "Purple")
-		
-		-- Set the bar to target player and cast Remove Curse when clicked
-		local raidIndex = nil
-		for i = 1,40 do
-			local unit = "raid"..i
-			if UnitExists(unit) and UnitName(unit) == player then
-				raidIndex = unit
-				break
-			end
-		end
-		
-		self:SetCandyBarOnClick("BigWigsBar " .. barText, function(name, button, playerName, target)
-			if SUPERWOW_VERSION or SetAutoloot then
-				if playerClass == "MAGE" then
-					CastSpellByName("Remove Lesser Curse", target)
-				elseif playerClass == "DRUID" then
-					CastSpellByName("Remove Curse", target)
-				end
-			else
-				TargetByName(playerName, true)
-				if playerClass == "MAGE" then
-					CastSpellByName("Remove Lesser Curse")
-				elseif playerClass == "DRUID" then
-					CastSpellByName("Remove Curse")
-				end
-			end
-		end, player, raidIndex)
+		self:ClickBar(string.format(L.bar_doom, player), timer.doom, icon.doom, player, L.spell_doom, true, "Purple")
 	end
 end
 
@@ -578,6 +570,21 @@ end
 function module:NightmareFade(player)
 	if self.db.profile.marknightmare then
 		self:RestorePreviousRaidTargetForPlayer(player)
+	end
+end
+
+function module:NathrezimTerror()
+	-- remove any current or future CD bars
+	self:CancelDelayedBar(L.bar_fearCD)
+	self:RemoveBar(L.bar_fearCD)
+
+	if self.db.profile.fearcast then
+		self:Message(L.msg_fearCast, "Core")
+		self:Bar(L.bar_fearCast, timer.fearCast, icon.fear, true, "Cyan")
+	end
+	if self.db.profile.fearcd then
+		local delay = timer.fearCast + timer.fearDuration + 1
+		self:DelayedIntervalBar(delay, L.bar_fearCD, timer.fearCD[1]-delay, timer.fearCD[2]-delay, icon.fear, true, "ItemQuality0")
 	end
 end
 
@@ -642,6 +649,13 @@ function module:Test()
 		self:TriggerEvent("CHAT_MSG_SPELL_FRIENDLYPLAYER_DAMAGE", msg)	
 	end, 3 + 32)
 
+	-- first Fear
+	self:ScheduleEvent(self:ToString() .. "FearTest1", function()
+		local msg = "Mephistroth begins to cast Nathrezim Terror."
+		print("Test: " .. msg)
+		self:TriggerEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE",msg)
+	end, 3 + 35)
+
 	-- Shard Spawn
 	self:ScheduleEvent(self:ToString() .. "ShardsCDTest1", function()
 		BigWigs:TriggerEvent("UNIT_CASTEVENT", "player", "player", "START", spellIds.shardsCast, 6000)
@@ -655,6 +669,13 @@ function module:Test()
 		print("Test: " .. msg)
 		self:TriggerEvent("CHAT_MSG_MONSTER_YELL", msg)	
 	end, 3 + 42)
+
+	-- second Shackles
+	self:ScheduleEvent(self:ToString() .. "ShacklesDebuffTest7", function()
+		local msg = "Mephistroth begins to cast Shackles of the Legion!"
+		print("Test: " .. msg)
+		self:TriggerEvent("CHAT_MSG_RAID_BOSS_EMOTE", msg)
+	end, 0.5 + 47)
 
 	-- simulate hellfire shards ending their channel, naturally or by dying
 	self:ScheduleEvent(self:ToString() .. "ShardsChannelTest1_1", function()
@@ -732,11 +753,12 @@ function module:Test()
 		self:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_CREATURE_BUFFS",msg)
 	end, 3 + 67)
 
-	self:ScheduleEvent(self:ToString() .. "FearTest", function()
+	-- second Fear
+	self:ScheduleEvent(self:ToString() .. "FearTest2", function()
 		local msg = "Mephistroth begins to cast Nathrezim Terror."
 		print("Test: " .. msg)
 		self:TriggerEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE",msg)
-	end, 3 + 70)
+	end, 3 + 35 + 35)
 
 	self:ScheduleEvent(self:ToString() .. "ShardFailTest", function()
 		local msg = "Mephistroth gains Unfathomed Hatred."
@@ -765,6 +787,13 @@ function module:Test()
 		print("Test: " .. msg)
 		self:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_SELF", msg)
 	end, 3 + 83)
+
+	-- third Shackles
+	self:ScheduleEvent(self:ToString() .. "ShacklesDebuffTest8", function()
+		local msg = "Mephistroth begins to cast Shackles of the Legion!"
+		print("Test: " .. msg)
+		self:TriggerEvent("CHAT_MSG_RAID_BOSS_EMOTE", msg)
+	end, 0.5 + 47 + 55)
 
 	-- Shard Spawn
 	self:ScheduleEvent(self:ToString() .. "ShardsCDTest2", function()

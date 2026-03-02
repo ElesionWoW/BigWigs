@@ -47,7 +47,7 @@ L:RegisterTranslations("enUS", function() return {
 	trigger_markOther = "(.+) is afflicted by Mark of Arlokk.", --CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE // CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE
 	trigger_markFade = "Mark of Arlokk fades from (.+).", --CHAT_MSG_SPELL_AURA_GONE_SELF // CHAT_MSG_SPELL_AURA_GONE_PARTY // CHAT_MSG_SPELL_AURA_GONE_OTHER
 	msg_mark = " is Marked!",
-	bar_mark = " Marked",
+	bar_mark = " Marked >target<",
 	
 	trigger_ww = "High Priestess Arlokk's Whirlwind",--CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE // CHAT_MSG_SPELL_CREATURE_VS_PARTY_DAMAGE // CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE
 	bar_ww = "Whirlwind CD",
@@ -332,8 +332,7 @@ end
 function module:Mark(rest)
 	self:Message(rest..L["msg_mark"], "Attention")
 
-	self:Bar(rest..L["bar_mark"].. " >Click Me<", timer.mark, icon.mark, true, color.mark)
-	self:SetCandyBarOnClick("BigWigsBar "..rest..L["bar_mark"].. " >Click Me<", function(name, button, extra) TargetByName(extra, true) end, rest)
+	self:ClickBar(rest..L["bar_mark"], timer.mark, icon.mark, rest, false, true, color.mark)
 
 	if (IsRaidLeader() or IsRaidOfficer()) then
 		for i=1,GetNumRaidMembers() do
@@ -345,7 +344,7 @@ function module:Mark(rest)
 end
 
 function module:MarkFade(rest)
-	self:RemoveBar(rest..L["bar_mark"].. " >Click Me<")
+	self:RemoveBar(rest..L["bar_mark"])
 	
 	if (IsRaidLeader() or IsRaidOfficer()) then
 		for i=1,GetNumRaidMembers() do

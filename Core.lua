@@ -84,13 +84,25 @@ L:RegisterTranslations("enUS", function()
 		["Alterac Valley"] = true,
 		["Arathi Basin"] = true,
 
-		--Name for exception bosses (neutrals that enable modules)
+		-- Name for exception bosses (neutrals that enable modules)
 		["Vaelastrasz the Corrupt"] = true,
 		["Lord Victor Nefarius"] = true,
 		["Solnius"] = true,
 		["Lieutenant General Andorov"] = true,
 
 		["You have slain %s!"] = true,
+
+		-- Raid Marks
+		["Star"] = true,
+		["Circle"] = true,
+		["Diamond"] = true,
+		["Triangle"] = true,
+		["Moon"] = true,
+		["Square"] = true,
+		["Cross"] = true,
+		["Skull"] = true,
+		["none"] = true,
+		["unmarked"] = true,
 	}
 end)
 
@@ -155,6 +167,18 @@ L:RegisterTranslations("esES", function()
 		["Lord Victor Nefarius"] = "Lord Victor Nefarius",
 
 		["You have slain %s!"] = "¡Has matado %s!",
+
+		-- Raid Marks
+		["Star"] = "Estrella",
+		["Circle"] = "Círculo",
+		["Diamond"] = "Diamante",
+		["Triangle"] = "Triángulo",
+		["Moon"] = "Luna",
+		["Square"] = "Cuadrado",
+		["Cross"] = "Cruz",
+		["Skull"] = "Cráneo",
+		["none"] = "ninguna",
+		["unmarked"] = "sin marcar",
 	}
 end)
 
@@ -209,6 +233,18 @@ L:RegisterTranslations("deDE", function()
 		-- ["Outdoor Raid Bosses Zone"] = "Outdoor Raid Bosses", -- DO NOT EVER TRANSLATE untill I find a more elegant option
 
 		["You have slain %s!"] = "Ihr habt %s getötet!",
+
+		-- Raid Marks
+		["Star"] = "Stern",
+		["Circle"] = "Kreis",
+		["Diamond"] = "Raute",
+		["Triangle"] = "Dreieck",
+		["Moon"] = "Mond",
+		["Square"] = "Quadrat",
+		["Cross"] = "Kreuz",
+		["Skull"] = "Schädel",
+		["none"] = "keine",
+		["unmarked"] = "unmarkiert",
 	}
 end)
 
@@ -498,6 +534,11 @@ function BigWigs.modulePrototype:SetRaidTargetForPlayer(player, mark)
 		self.storedPlayerMarks = {}
 	end
 	self.storedPlayerMarks[player] = previousMark
+
+	-- look up mark index if name string was input
+	if type(mark) == "string" then
+		mark = BigWigs:RaidTargetLookup(mark)
+	end
 
 	SetRaidTarget(playerUnit, mark)
 	return true
@@ -867,11 +908,17 @@ function BigWigs.modulePrototype:CancelDelayedMessage(text)
 	self:CancelScheduledEvent(delayPrefix .. "Message" .. self:ToString() .. text)
 end
 
-function BigWigs.modulePrototype:Bar(text, time, icon, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
-	self:TriggerEvent("BigWigs_StartBar", self, text, time, "Interface\\Icons\\" .. icon, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
+function BigWigs.modulePrototype:Bar(text, time, icon, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, emphasize, target, spell)
+	self:TriggerEvent("BigWigs_StartBar", self, text, time, "Interface\\Icons\\" .. icon, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, emphasize, target, spell)
 end
 function BigWigs.modulePrototype:RemoveBar(text)
 	self:TriggerEvent("BigWigs_StopBar", self, text)
+end
+function BigWigs.modulePrototype:DelayedBar(delay, text, time, icon, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, emphasize, target, spell)
+	return self:ScheduleEvent(delayPrefix .. "Bar" .. self:ToString() .. text, "BigWigs_StartBar", delay, self, text, time, "Interface\\Icons\\" .. icon, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, emphasize, target, spell)
+end
+function BigWigs.modulePrototype:CancelDelayedBar(text)
+	self:CancelScheduledEvent(delayPrefix .. "Bar" .. self:ToString() .. text)
 end
 
 function BigWigs.modulePrototype:IntervalBar(text, intervalMin, intervalMax, icon, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
@@ -881,12 +928,20 @@ function BigWigs.modulePrototype:DelayedIntervalBar(delay, text, intervalMin, in
 	return self:ScheduleEvent(delayPrefix .. "Bar" .. self:ToString() .. text, "BigWigs_StartIntervalBar", delay, self, text, intervalMin, intervalMax, "Interface\\Icons\\" .. icon, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
 end
 
-function BigWigs.modulePrototype:DelayedBar(delay, text, time, icon, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
-	return self:ScheduleEvent(delayPrefix .. "Bar" .. self:ToString() .. text, "BigWigs_StartBar", delay, self, text, time, "Interface\\Icons\\" .. icon, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
+function BigWigs.modulePrototype:ClickBar(text, time, icon, target, spell, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, emphasize)
+	self:TriggerEvent("BigWigs_StartBar", self, text, time, "Interface\\Icons\\" .. icon, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, emphasize, target, spell)
 end
-function BigWigs.modulePrototype:CancelDelayedBar(text)
-	self:CancelScheduledEvent(delayPrefix .. "Bar" .. self:ToString() .. text)
+function BigWigs.modulePrototype:DelayedClickBar(delay, text, time, icon, target, spell, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, emphasize)
+	return self:ScheduleEvent(delayPrefix .. "Bar" .. self:ToString() .. text, "BigWigs_StartBar", delay, self, text, time, "Interface\\Icons\\" .. icon, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, emphasize, target, spell)
 end
+
+function BigWigs.modulePrototype:MonitorBar(barName, icon, guid, type, displayText, insertMark, emphazise, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
+	self:TriggerEvent("BigWigs_StartMonitorBar", self, barName, "Interface\\Icons\\" .. icon, guid, type, displayText, insertMark, emphazise, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
+end
+function BigWigs.modulePrototype:DelayedMonitorBar(delay, barName, icon, guid, type, displayText, insertMark, emphazise, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
+	return self:ScheduleEvent(delayPrefix .. "Bar" .. self:ToString() .. barName, "BigWigs_StartMonitorBar", delay, self, barName, "Interface\\Icons\\" .. icon, guid, type, displayText, insertMark, emphazise, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
+end
+
 function BigWigs.modulePrototype:BarStatus(text)
 	local registered, time, elapsed, running = BigWigsBars:GetBarStatus(self, text)
 	return registered, time, elapsed, running
@@ -895,14 +950,12 @@ end
 function BigWigs.modulePrototype:Sound(sound)
 	self:TriggerEvent("BigWigs_Sound", sound)
 end
-
 function BigWigs.modulePrototype:DelayedSound(delay, sound, id)
 	if not id then
 		id = "_"
 	end
 	return self:ScheduleEvent(delayPrefix .. "Sound" .. self:ToString() .. sound .. id, "BigWigs_Sound", delay, sound)
 end
-
 function BigWigs.modulePrototype:CancelDelayedSound(sound, id)
 	if not id then
 		id = "_"
@@ -1563,5 +1616,109 @@ function BigWigs:BuffNameByIndex(buffIndex)
 	end
 end
 -- /run local i=0 DEFAULT_CHAT_FRAME:AddMessage("Buff "..(i+1)..": "..BigWigs:BuffNameByIndex(i))
+
+
+function BigWigs:GetUnitIdByName(name, depth)
+	depth = depth or 0 -- default to raid members
+	local suffix = ""
+	for i = 1,depth do
+		suffix = suffix .. "target"
+	end
+
+	--iterate over the raid and check the specified depth for a name match
+	for i = 1, GetNumRaidMembers() do
+		local id = "raid" .. i .. suffix
+		if UnitName(id) == name then
+			return id
+		end
+	end
+end
+
+function BigWigs:GetTargetByName(name, depth)
+	depth = depth or 1 -- default to targets of raid members
+	local unitId = BigWigs:GetUnitIdByName(name, depth)
+	if unitId then 
+		local target = UnitName(unitId.."target")
+		return target
+	end
+end
+
+function BigWigs:GetGUIDByName(name, depth, ignoredGUIDs)
+	depth = depth or 1 -- default to targets of raid members
+	local suffix = ""
+	for i = 1,depth do
+		suffix = suffix .. "target"
+	end
+
+	--iterate over the raid and check the specified depth for a name match
+	for i = 1, GetNumRaidMembers() do
+		local id = "raid" .. i .. suffix
+		if UnitName(id) == name then
+			local _, targetGUID = UnitExists(id)
+			-- name matched, now check exclusion list
+			if type(ignoredGUIDs) == "table" then
+				for _, excludedGUID in pairs(ignoredGUIDs) do
+					if targetGUID == excludedGUID then
+						targetGUID = nil
+						break
+					end
+				end
+			end
+			if targetGUID then
+				return targetGUID
+			end
+		end
+	end
+end
+
+function BigWigs:OffsetGUID(input, offset)
+	local max = 4294967295 -- 32 bit limitation of tonumber and string.format
+	local prefix, highInput, lowInput = string.sub(input,1,-17), string.sub(input,-16,-9), string.sub(input,-8)
+
+	local lowOutput = tonumber(lowInput,16) + offset
+	local highOutput = tonumber(highInput,16)
+	if lowOutput < 0 then
+		lowOutput = lowOutput + max + 1
+		highOutput = highOutput - 1
+	elseif lowOutput > max then
+		lowOutput = lowOutput - max - 1
+		highOutput = highOutput + 1
+	end
+
+	return prefix..string.format("%08X",highOutput)..string.format("%08X",lowOutput)
+end
+
+function BigWigs:RaidTargetLookup(input)
+	local raidTargets = {
+		[0] = "none", -- following pattern of SetRaidTarget()
+		[1] = "Star",
+		[2] = "Circle",
+		[3] = "Diamond",
+		[4] = "Triangle",
+		[5] = "Moon",
+		[6] = "Square",
+		[7] = "Cross",
+		[8] = "Skull"
+	}
+
+	-- convert index to name
+	if type(input) == "number" then
+		local output = raidTargets[input]
+		if output then return L[output] end --localize output for displaying
+
+	-- convert name to index
+	elseif type(input) == "string" then
+		input = string.lower(input)
+		for i=0,8 do
+			if input == string.lower(raidTargets[i]) then
+				return i
+			end
+		end
+
+	-- nil means unmarked following pattern of GetRaidTargetIndex()
+	elseif type(input) == "nil" then
+		return L["unmarked"]
+	end
+end
 
 

@@ -1,14 +1,14 @@
 ## Interface: 11200
 
-## X-Revision: 30134
+## X-Revision: 30135
 ## X-Fork: Golden
-## Title: |cFFEDD516Golden|r Big Wigs |cff7fff7f30134|r |cffabd473Turtle-WoW|r
+## Title: |cFFEDD516Golden|r Big Wigs |cff7fff7f30135|r |cffabd473Turtle-WoW|r
 ## Title-zhCN: |cffabd473Turtle-WoW|r Big Wigs
 ## Notes: Boss Mods with Timer bars.
 ## Notes-esES: Módulos para Jefes con barras temporizadoras.
 ## Notes-zhCN: 团队首领战信息提示插件，带有计时条。
 ## Notes-zhTW: 團隊首領戰訊息提示插件，帶有計時條。
-## Author: Relar, Balake, Pepopo, Bethy, Tekkub Stoutwrithe, Ammo, Shyva, Rabbit, LYQ, Dorann, Hosq & Others
+## Author: Elesion, Relar, Balake, Pepopo, Bethy, Tekkub Stoutwrithe, Ammo, Shyva, Rabbit, LYQ, Dorann, Hosq & Others
 ## Version: 2.0.0
 ## X-Website: https://github.com/ElesionWoW/BigWigs
 ## X-Category: Raid

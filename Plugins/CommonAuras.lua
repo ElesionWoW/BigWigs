@@ -785,58 +785,37 @@ function BigWigsCommonAuras:BigWigs_RecvSync(sync, rest, nick)
 			swTime = 10
 		end -- If the tank uses an old BWCA, just assume 10 seconds.
 		self:TriggerEvent("BigWigs_Message", nick .. L["msg_shieldwall"], "Urgent", false, nil, false)
-		self:TriggerEvent("BigWigs_StartBar", self, nick .. L["bar_shieldwall"], swTime, icon.shieldwall, true, color.shieldwall)
-		self:SetCandyBarOnClick("BigWigsBar " .. nick .. L["bar_shieldwall"], function(name, button, extra)
-			TargetByName(extra, true)
-		end, nick)
+		self:TriggerEvent("BigWigs_StartBar", self, nick .. L["bar_shieldwall"], swTime, icon.shieldwall, true, color.shieldwall, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, nick, false)
 
 
 	elseif self.db.profile.laststand and sync == "BWCALS" then
 		self:TriggerEvent("BigWigs_Message", nick .. L["msg_laststand"], "Urgent", false, nil, false)
-		self:TriggerEvent("BigWigs_StartBar", self, nick .. L["bar_laststand"], timer.laststand, icon.laststand, true, color.laststand)
-		self:SetCandyBarOnClick("BigWigsBar " .. nick .. L["bar_laststand"], function(name, button, extra)
-			TargetByName(extra, true)
-		end, nick)
+		self:TriggerEvent("BigWigs_StartBar", self, nick .. L["bar_laststand"], timer.laststand, icon.laststand, true, color.laststand, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, nick, false)
 
 
 	elseif self.db.profile.lifegivinggem and sync == "BWCALG" then
 		self:TriggerEvent("BigWigs_Message", nick .. L["msg_lifegivingGem"], "Urgent", false, nil, false)
-		self:TriggerEvent("BigWigs_StartBar", self, nick .. L["bar_lifegivingGem"], timer.lifegivingGem, icon.lifegivingGem, true, color.lifegivingGem)
-		self:SetCandyBarOnClick("BigWigsBar " .. nick .. L["bar_lifegivingGem"], function(name, button, extra)
-			TargetByName(extra, true)
-		end, nick)
+		self:TriggerEvent("BigWigs_StartBar", self, nick .. L["bar_lifegivingGem"], timer.lifegivingGem, icon.lifegivingGem, true, color.lifegivingGem, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, nick, false)
 
 
 	elseif self.db.profile.challengingshout and sync == "BWCACS" then
 		self:TriggerEvent("BigWigs_Message", nick .. L["msg_challengingShout"], "Urgent", false, nil, false)
-		self:TriggerEvent("BigWigs_StartBar", self, nick .. L["bar_challengingShout"], timer.challenging, icon.challengingShout, true, color.challengingShout)
-		self:SetCandyBarOnClick("BigWigsBar " .. nick .. L["bar_challengingShout"], function(name, button, extra)
-			TargetByName(extra, true)
-		end, nick)
+		self:TriggerEvent("BigWigs_StartBar", self, nick .. L["bar_challengingShout"], timer.challenging, icon.challengingShout, true, color.challengingShout, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, nick, false)
 
 
 	elseif self.db.profile.challengingroar and sync == "BWCACR" then
 		self:TriggerEvent("BigWigs_Message", nick .. L["msg_challengingRoar"], "Urgent", false, nil, false)
-		self:TriggerEvent("BigWigs_StartBar", self, nick .. L["bar_challengingRoar"], timer.challenging, icon.challengingRoar, true, color.challengingRoar)
-		self:SetCandyBarOnClick("BigWigsBar " .. nick .. L["bar_challengingRoar"], function(name, button, extra)
-			TargetByName(extra, true)
-		end, nick)
+		self:TriggerEvent("BigWigs_StartBar", self, nick .. L["bar_challengingRoar"], timer.challenging, icon.challengingRoar, true, color.challengingRoar, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, nick, false)
 
 
 	elseif self.db.profile.spiritlink and sync == "BWCASL" and rest then
 		-- self:TriggerEvent("BigWigs_Message", L["msg_spiritLink"] .. rest, "Important", false, nil, false) -- noise
 		self:TriggerEvent("BigWigs_Sound", "Info")
-		self:TriggerEvent("BigWigs_StartBar", self, rest .. L["bar_spiritLink"], timer.spiritLink, icon.spiritLink, true, color.spiritLink)
-		self:SetCandyBarOnClick("BigWigsBar " .. rest .. L["bar_spiritLink"], function(name, button, extra)
-			TargetByName(extra, true)
-		end, rest)
+		self:TriggerEvent("BigWigs_StartBar", self, rest .. L["bar_spiritLink"], timer.spiritLink, icon.spiritLink, true, color.spiritLink, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, nick, false)
 
 	elseif self.db.profile.di and sync == "BWCADI" then
 		self:TriggerEvent("BigWigs_Message", L["msg_divineIntervention"] .. nick, "Urgent", false, nil, false)
 		self:TriggerEvent("BigWigs_StartBar", self, nick .. L["bar_divineIntervention"], timer.di, icon.di, true, color.di)
-		self:SetCandyBarOnClick("BigWigsBar " .. nick .. L["bar_divineIntervention"], function(name, button, extra)
-			TargetByName(extra, true)
-		end, nick)
 
 	elseif self.db.profile.portal and sync == "BWCAP" and rest then
 		rest = BS:HasTranslation(rest) and BS:GetTranslation(rest) or rest

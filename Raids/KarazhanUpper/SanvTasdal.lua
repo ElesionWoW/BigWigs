@@ -3,7 +3,7 @@ local module, L = BigWigs:ModuleDeclaration("Sanv Tas'dal", "Karazhan")
 -- module variables
 module.revision = 30002
 module.enabletrigger = module.translatedName
-module.toggleoptions = { "phaseshifted", "overflowinghatred", "addphase", "bosskill" }
+module.toggleoptions = { "phaseshifted", "overflowinghatred", "addphase", "curseoftherift", "keepcurse", "riftfeedback", "bosskill" }
 module.zonename = {
 	AceLibrary("AceLocale-2.2"):new("BigWigs")["Tower of Karazhan"],
 	AceLibrary("Babble-Zone-2.2")["Tower of Karazhan"],
@@ -16,6 +16,9 @@ module.defaultDB = {
 	phaseshifted = true,
 	overflowinghatred = true,
 	addphase = true,
+	curseoftherift = false,
+	keepcurse = true,
+	riftfeedback = false,
 }
 
 -- localization
@@ -34,6 +37,18 @@ L:RegisterTranslations("enUS", function()
 		addphase_cmd = "addphase",
 		addphase_name = "Add-Phase Timer",
 		addphase_desc = "Shows a timer bar for the add phase at 40%",
+		
+		curseoftherift_cmd = "curseoftherift",
+		curseoftherift_name = "Curse Timer",
+		curseoftherift_desc = "Shows a timer for repeated Curse of the Rift applications",
+
+		keepcurse_cmd = "keepcurse",
+		keepcurse_name = "Curse Alert",
+		keepcurse_desc = "Shows a message to maintain Curse of the Rift on the last Curse application before the next Rift Feedback",
+
+		riftfeedback_cmd = "riftfeedback",
+		riftfeedback_name = "Rift Feedback CD",
+		riftfeedback_desc = "Shows a timer for the minimum CD of Rift Feedback",
 
 
 		trigger_phaseShiftedYou = "You are afflicted by Phase Shifted",
@@ -53,9 +68,17 @@ L:RegisterTranslations("enUS", function()
 		msg_portalsOpen = "80% HP - Portals Opening",
 		msg_addPhase = "40% HP - Add Phase",
 		bar_addPhase = "Add Phase",
-		
+
 		trigger_Enrage = "Sanv Tas'dal gains Enrage",
 		msg_Enrage = "Enrage - Tranq now!",
+
+		trigger_curseRift = "afflicted by Curse of the Rift",
+		trigger_curseRiftImmune = "Curse of the Rift fails%.", -- triggers only on raid member immunity messages. Does not account for "Sanv Tas'dal's Curse of the Rift failed. You are immune." but it shouldn't be necessary
+		bar_curseRift = "next Curse",
+		
+		trigger_riftFeedback = "Sanv Tas'dal's Rift Feedback",
+		bar_riftFeedback = "Rift Feedback CD",
+		msg_keepCurse = "Keep the Curse - Feedback soon!",
 	}
 end)
 
@@ -64,22 +87,28 @@ local timer = {
 	phaseShiftedDuration = 25,
 	overflowingHatredCast = 6,
 	addPhase = 50,
+	curseRift = 15, -- very reliable 15-16s interval
+	riftFeedback = 45, -- lots of 47s and 53s cast-to-cast observed in logs; going with minimum CD because the only relevant info is when to keep Curse
 }
 
 local icon = {
 	phaseShifted = "Spell_Shadow_AbominationExplosion",
 	overflowingHatred = "Spell_Fire_Incinerate",
-	addPhase = "Spell_Arcane_TeleportOrgrimmar"
-}
-
-local color = {
-	red = "Red",
+	addPhase = "Spell_Arcane_TeleportOrgrimmar",
+	curseRift = "Spell_Shadow_GrimWard",
+	riftFeedback = "Spell_Nature_Wispsplode",
 }
 
 local syncName = {
 	phaseShifted = "SanvTasdalPhaseShifted" .. module.revision,
 	phaseShiftedFade = "SanvTasdalPhaseShiftedFade" .. module.revision,
 	overflowingHatred = "SanvTasdalOverflowingHatred" .. module.revision,
+	curseRift = "SanvTasdalCurseRift" .. module.revision,
+	riftFeedback = "SanvTasdalRiftFeedback" .. module.revision,
+}
+
+local guid = {
+	sanv = "0xF13000EA4D05DA44",
 }
 
 function module:OnEnable()
@@ -89,29 +118,31 @@ function module:OnEnable()
 	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_SELF")
 	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_OTHER")
 
-	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE", "BeginsCastEvent")
-	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_BUFF", "BeginsCastEvent")
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE", "CastEvent")
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_BUFF", "CastEvent")
 	
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_CREATURE_BUFFS")
 
 	self:ThrottleSync(3, syncName.phaseShifted)
 	self:ThrottleSync(3, syncName.phaseShiftedFade)
 	self:ThrottleSync(3, syncName.overflowingHatred)
+	self:ThrottleSync(3, syncName.curseRift)
+	self:ThrottleSync(3, syncName.riftFeedback)
 end
 
 function module:OnSetup()
-	self.bossHealth = 100
 	self.hitEighty = nil
-	self.hitFourty = nil
+	self.hitForty = nil
+	self.nextFeedback = nil
 end
 
 function module:OnEngage()
-	self.bossHealth = 100
 	self.hitEighty = nil
-	self.hitFourty = nil
+	self.hitForty = nil
+	self.nextFeedback = nil
 	
 	-- Start health monitoring
-	self:ScheduleRepeatingEvent("CheckBossHealth", self.CheckBossHealth, 1, self)
+	self:ScheduleRepeatingEvent("CheckBossHealth", self.CheckBossHealth, 0.5, self)
 end
 
 function module:OnDisengage()
@@ -130,11 +161,18 @@ function module:AfflictionEvent(msg)
 			self:Sync(syncName.phaseShifted .. " " .. player)
 		end
 	end
+	
+	-- Curse of the Rift
+	if string.find(msg, L["trigger_curseRift"]) or string.find(msg, L["trigger_curseRiftImmune"])then
+		self:Sync(syncName.curseRift)
+	end
 end
 
-function module:BeginsCastEvent(msg)
+function module:CastEvent(msg)
 	if string.find(msg, L["trigger_overflowingHatredCast"]) then
 		self:Sync(syncName.overflowingHatred)
+	elseif string.find(msg, L["trigger_riftFeedback"]) then
+		self:Sync(syncName.riftFeedback)
 	end
 end
 
@@ -169,6 +207,10 @@ function module:BigWigs_RecvSync(sync, rest, nick)
 		self:PhaseShiftedFade(rest)
 	elseif sync == syncName.overflowingHatred then
 		self:OverflowingHatred()
+	elseif sync == syncName.curseRift then
+		self:CurseOfTheRift()
+	elseif sync == syncName.riftFeedback then
+		self:RiftFeedback()
 	end
 end
 
@@ -193,36 +235,53 @@ function module:OverflowingHatred()
 	if self.db.profile.overflowinghatred then
 		self:Message(L["msg_overflowingHatred"], "Important", nil, "Alarm")
 		self:WarningSign(icon.overflowingHatred, 3, true, L["warn_overflowingHatred"])
-		self:Bar(L["bar_overflowingHatredCast"], timer.overflowingHatredCast, icon.overflowingHatred, true, color.red)
+		self:Bar(L["bar_overflowingHatredCast"], timer.overflowingHatredCast, icon.overflowingHatred, true, "Red")
 	end
 end
 
 function module:CheckBossHealth()
-	for i = 1, GetNumRaidMembers() do
-		local targetString = "raid" .. i .. "target"
-		local targetName = UnitName(targetString)
+	if UnitExists(guid.sanv) then
+		local percent = UnitHealth(guid.sanv)/UnitHealthMax(guid.sanv) * 100
 
-		if targetName == module.translatedName then
-			local health = UnitHealth(targetString)
-			local healthMax = UnitHealthMax(targetString)
-
-			if health > 0 and healthMax > 0 then
-				self.bossHealth = math.ceil((health / healthMax) * 100)
-
-				if self.bossHealth <= 80 and not self.hitEighty then
-					self:Message(L["msg_portalsOpen"], "Attention", nil, "Alarm")
-					self.hitEighty = true
-				end
-				if self.bossHealth <= 40 and not self.hitFourty then
-					self:Message(L["msg_addPhase"], "Attention", nil, "Alarm")
-					if self.db.profile.addphase then
-						self:Bar(L["bar_addPhase"], timer.addPhase, icon.addPhase, true, "blue")
-					end
-					self.hitFourty = true
-				end
-				break
-			end
+		if percent <= 80 and not self.hitEighty then
+			self:Message(L["msg_portalsOpen"], "Attention", nil, "Alarm")
+			self.hitEighty = true
 		end
+		if percent <= 40 and not self.hitForty then
+			self:AddPhase()
+			self.hitForty = true
+			self:CancelScheduledEvent("CheckBossHealth")
+		end
+	end
+end
+
+function module:AddPhase()
+	self:Message(L["msg_addPhase"], "Attention", nil, "Alarm")
+	self:RemoveBar(L["bar_curseRift"])
+	self:RemoveBar(L["bar_overflowingHatredCast"])
+	if self.db.profile.addphase then
+		self:Bar(L["bar_addPhase"], timer.addPhase, icon.addPhase, true, "blue")
+	end
+	self.nextFeedback = GetTime() + timer.addPhase + 10
+end
+
+function module:CurseOfTheRift()
+	if self.db.profile.curseoftherift then
+		self:RemoveBar(L["bar_curseRift"])
+		self:Bar(L["bar_curseRift"], timer.curseRift, icon.curseRift, true, "White")
+	end
+
+	if self.nextFeedback and self.db.profile.keepcurse and self.nextFeedback - GetTime() < timer.curseRift then
+		self:Message(L["msg_keepCurse"], "Positive", nil, "Info")
+	end
+end
+
+function module:RiftFeedback()
+	self.nextFeedback = GetTime() + timer.riftFeedback
+	
+	if self.db.profile.riftfeedback then
+		self:RemoveBar(L["bar_riftFeedback"])
+		self:Bar(L["bar_riftFeedback"], timer.riftFeedback, icon.riftFeedback, true, "Blue")	
 	end
 end
 
@@ -254,13 +313,6 @@ function module:Test()
 			module:CHAT_MSG_SPELL_AURA_GONE_OTHER(msg)
 		end },
 
-		-- Add Overflowing Hatred test
-		{ time = 12, func = function()
-			local msg = "Sanv Tas'dal begins to cast Overflowing Hatred"
-			print("Test: " .. msg)
-			module:BeginsCastEvent(msg)
-		end },
-
 		{ time = 15, func = function()
 			local msg = "You are afflicted by Phase Shifted"
 			print("Test: " .. msg)
@@ -271,13 +323,6 @@ function module:Test()
 			local msg = "Phase Shifted fades from you"
 			print("Test: " .. msg)
 			module:CHAT_MSG_SPELL_AURA_GONE_SELF(msg)
-		end },
-
-		-- Add another Overflowing Hatred test
-		{ time = 27, func = function()
-			local msg = "Sanv Tas'dal begins to cast Overflowing Hatred"
-			print("Test: " .. msg)
-			module:BeginsCastEvent(msg)
 		end },
 
 		{ time = 30, func = function()
@@ -292,13 +337,82 @@ function module:Test()
 			module:CHAT_MSG_COMBAT_FRIENDLY_DEATH(msg)
 		end },
 
+		-- Curse of the Rift when others have FAP active
+		{ time = 7, func = function() 
+			local msg = "Sanv Tas'dal's Curse of the Rift fails. "..testPlayerName2.." is immune."
+			print("Test: " .. msg)
+			module:AfflictionEvent(msg)
+		end },
+
+		-- Test Curse of the Rift when others get it
+		{ time = 22, func = function() 
+			local msg = testPlayerName1 .. " is afflicted by Curse of the Rift"
+			print("Test: " .. msg)
+			module:AfflictionEvent(msg)
+		end },
+
+		-- Curse of the Rift when the player gets it
+		{ time = 37, func = function()
+			local msg = "You are afflicted by Curse of the Rift"
+			print("Test: " .. msg)
+			module:AfflictionEvent(msg)
+		end },
+
+		-- Curse of the Rift after Add Phase
+		{ time = 84, func = function() 
+			local msg = "Sanv Tas'dal's Curse of the Rift fails. "..testPlayerName2.." is immune."
+			print("Test: " .. msg)
+			module:AfflictionEvent(msg)
+		end },
+
+		-- Add Overflowing Hatred test
+		{ time = 12, func = function()
+			local msg = "Sanv Tas'dal begins to cast Overflowing Hatred"
+			print("Test: " .. msg)
+			module:CastEvent(msg)
+		end },
+
+		-- Add another Overflowing Hatred test
+		{ time = 27, func = function()
+			local msg = "Sanv Tas'dal begins to cast Overflowing Hatred"
+			print("Test: " .. msg)
+			module:CastEvent(msg)
+		end },
+
+		{ time = 29, func = function()
+			print("Test: Forcing Add Phase (40%)")
+			module:AddPhase()
+			module.hitForty = true
+		end },
+
 		{ time = 36, func = function()
 			local msg = "Sanv Tas'dal gains Enrage."
 			print("Test: " .. msg)
 			module:CHAT_MSG_SPELL_PERIODIC_CREATURE_BUFFS(msg)
 		end },
 
-		{ time = 40, func = function()
+		-- Rift Feedback hits
+		{ time = 42, func = function()
+			local msg = "Sanv Tas'dal's Rift Feedback hits "..testPlayerName1.." for 0 Arcane damage. (3000 resisted)"
+			print("Test: " .. msg)
+			module:CastEvent(msg)
+		end },
+		
+		-- Test Rift Feedback resists
+		{ time = 45, func = function()
+			local msg = "Sanv Tas'dal's Rift Feedback was resisted by " .. testPlayerName2
+			print("Test: " .. msg)
+			module:CastEvent(msg)
+		end },
+		
+		-- Rift Feedback after Add Phase
+		{ time = 88, func = function()
+			local msg = "Sanv Tas'dal's Rift Feedback was resisted by " .. testPlayerName1
+			print("Test: " .. msg)
+			module:CastEvent(msg)
+		end },
+
+		{ time = 95, func = function()
 			print("Test: Disengage")
 			module:Disengage()
 		end },

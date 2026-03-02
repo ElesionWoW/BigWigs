@@ -3,7 +3,7 @@ local module, L = BigWigs:ModuleDeclaration("Ley-Watcher Incantagos", "Karazhan"
 -- module variables
 module.revision = 30003
 module.enabletrigger = module.translatedName
-module.toggleoptions = { "leyline", "affinity", "targetBlack", "targetBlue", "targetCrystal", "targetGreen", "targetMana", "targetRed", -1, "surgewarning", "surgesay", "summonseeker", "summonwhelps", -1, "beam", "blizzard", "proximity", "cursewarning", "bosskill"}
+module.toggleoptions = { "leyline", "affinity", "targetBlack", "targetBlue", "targetCrystal", "targetGreen", "targetMana", "targetRed", -1, "surgewarning", "surgesay", "summonseeker", "summonwhelps", "summoncd", -1, "beam", "blizzard", "proximity", "cursewarning", "bosskill"}
 module.zonename = {
 	AceLibrary("AceLocale-2.2"):new("BigWigs")["Tower of Karazhan"],
 	AceLibrary("Babble-Zone-2.2")["Tower of Karazhan"],
@@ -25,6 +25,7 @@ module.defaultDB = {
 	surgesay = true,
 	summonseeker = true,
 	summonwhelps = true,
+	summoncd = false,
 	beam = true,
 	blizzard = true,
 	proximity = false,
@@ -84,6 +85,10 @@ L:RegisterTranslations("enUS", function()
 		summonwhelps_name = "Summon Whelps Alert",
 		summonwhelps_desc = "Warns when Ley-Watcher Incantagos summons Manascale Whelps",
 
+		summoncd_cmd = "summoncd",
+		summoncd_name = "Summon Cooldown Timer",
+		summoncd_desc = "Shows a timer bar for the minimum cooldown of the next possible wave of summons",
+
 		beam_cmd = "beam",
 		beam_name = "Guided Ley-Beam Alert",
 		beam_desc = "Warns when players are affected by Guided Ley-Beam",
@@ -115,12 +120,12 @@ L:RegisterTranslations("enUS", function()
 		trigger_manaAffinity = "gains Mana Affinity",
 		trigger_redAffinity = "gains Red Affinity",
 
-		mob_blackAffinity = "Black Affinity",
-		mob_blueAffinity = "Blue Affinity",
-		mob_crystalAffinity = "Crystal Affinity",
-		mob_greenAffinity = "Green Affinity",
-		mob_manaAffinity = "Mana Affinity",
-		mob_redAffinity = "Red Affinity",
+		unit_blackAffinity = "Black Affinity",
+		unit_blueAffinity = "Blue Affinity",
+		unit_crystalAffinity = "Crystal Affinity",
+		unit_greenAffinity = "Green Affinity",
+		unit_manaAffinity = "Mana Affinity",
+		unit_redAffinity = "Red Affinity",
 
 		msg_blackAffinity = "BLACK AFFINITY - Priests and Warlocks handle this!",
 		msg_blueAffinity = "BLUE AFFINITY - Mages handle this!",
@@ -129,12 +134,12 @@ L:RegisterTranslations("enUS", function()
 		msg_manaAffinity = "MANA AFFINITY - Mages and Druids handle this!",
 		msg_redAffinity = "RED AFFINITY - Mages and Warlocks handle this!",
 
-		bar_blackAffinity = "Black Affinity (Shadow)",
-		bar_blueAffinity = "Blue Affinity (Frost)",
-		bar_crystalAffinity = "Crystal Affinity (Physical)",
-		bar_greenAffinity = "Green Affinity (Nature)",
-		bar_manaAffinity = "Mana Affinity (Arcane)",
-		bar_redAffinity = "Red Affinity (Fire)",
+		bar_blackAffinity = "Shadow Affinity >target<",
+		bar_blueAffinity = "Frost Affinity >target<",
+		bar_crystalAffinity = "Physical Affinity >target<",
+		bar_greenAffinity = "Nature Affinity >target<",
+		bar_manaAffinity = "Arcane Affinity >target<",
+		bar_redAffinity = "Fire Affinity >target<",
 
 		warn_blackAffinity = "SHADOW",
 		warn_blueAffinity = "FROST",
@@ -149,17 +154,18 @@ L:RegisterTranslations("enUS", function()
 		trigger_surgeDeath = "(.+) die",
 		msg_surgeYou = "Surge of Mana on YOU!",
 		msg_surge = "Surge on %s",
-		bar_surge = "Surge on %s >Click Me!<",
+		bar_surge = (playerClass=="PALADIN" and "Surge on %s >freedom<") or "Surge on %s >target<",
+		spell_surge = (playerClass=="PALADIN" and "Hand of Freedom") or false,
 		warn_surge = "SURGE OF MANA",
 		yell_surge = "Help me! (Surge of Mana)",
 
 		trigger_summonSeekerCast = "Watcher Incantagos begins to cast Summon Manascale Ley",
-		bar_summonSeekerCast = "Ley-Seeker Summoning",
 		msg_summonSeeker = "Manascale Ley-Seeker spawning in 2 sec!",
 
 		trigger_summonWhelpsCast = "Watcher Incantagos begins to cast Summon Manascale Whelps",
-		bar_summonWhelpsCast = "Whelps Summoning",
 		msg_summonWhelps = "Manascale Whelps spawning in 2 sec!",
+		
+		bar_summonCD = "Next Summon Wave",
 
 		trigger_leyBeamGain = "(.+) gain.? Guided Ley",
 		trigger_leyBeamAfflicted = "afflicted by Guided Ley",
@@ -193,6 +199,7 @@ local timer = {
 	leyLineCast = 3,
 	summonSeekerCast = 2,
 	summonWhelpsCast = 2,
+	summonCD = { 30, 40 },
 	affinity = 15,
 	initalBeamCD = 28,
 	beam = 13, -- 10 sec duration, starts 3 sec after initial targeting buff
@@ -201,6 +208,7 @@ local timer = {
 
 local icon = {
 	leyLine = "Spell_Arcane_PortalIronForge",
+	summonCD = "INV_Misc_Head_Dragon_Blue",
 	greenAffinity = "Spell_Nature_AbolishMagic",
 	blackAffinity = "Spell_Shadow_ShadowBolt",
 	redAffinity = "Spell_Fire_FlameBolt",
@@ -215,8 +223,6 @@ local icon = {
 
 local color = {
 	leyLine = "Blue",
-	summonSeeker = "Yellow",
-	summonWhelps = "Orange",
 }
 
 local syncName = {
@@ -231,6 +237,10 @@ local syncName = {
 	crystalAffinity = "IncantagosCrystalAffinity" .. module.revision,
 	beam = "IncantagosLeyBeam" .. module.revision,
 	allSeekersDead = "IncantagosSeekersDead" .. module.revision,
+}
+
+local guid = {
+	incantagos = "0xF13000F1FA276A32"
 }
 
 -- Proximity Plugin
@@ -278,8 +288,8 @@ function module:OnSetup()
 	self.started = nil
 	self.curseWarned = nil
 	self.hitEightyFive = nil
-	self.bossHealth = 100
 	self.seekersLeft = 4
+	self.lastSeekerSummon = 0
 end
 
 function module:OnEngage()
@@ -293,11 +303,10 @@ function module:OnEngage()
 
 	self.curseWarned = nil
 	self.hitEightyFive = nil
-	self.bossHealth = 100
 	self.seekersLeft = 4
 
 	-- Start health monitoring
-	self:ScheduleRepeatingEvent("CheckBossHealth", self.CheckBossHealth, 1, self)
+	self:ScheduleRepeatingEvent("CheckBossHealth", self.CheckBossHealth, 0.5, self)
 end
 
 function module:OnDisengage()
@@ -306,6 +315,7 @@ function module:OnDisengage()
 	if self:IsEventScheduled("CheckBossHealth") then
 		self:CancelScheduledEvent("CheckBossHealth")
 	end
+	self:CancelDelayedBar(L["bar_summonCD"])
 end
 
 function module:IncantagosCastEvent(casterGuid, targetGuid, eventType, spellId, castTime)
@@ -317,31 +327,21 @@ function module:IncantagosCastEvent(casterGuid, targetGuid, eventType, spellId, 
 end
 
 function module:CheckBossHealth()
-	for i = 1, GetNumRaidMembers() do
-		local targetString = "raid" .. i .. "target"
-		local targetName = UnitName(targetString)
+	if UnitExists(guid.incantagos) then
+		local percent = UnitHealth(guid.incantagos)/UnitHealthMax(guid.incantagos) * 100
 
-		if targetName == module.translatedName then
-			local health = UnitHealth(targetString)
-			local healthMax = UnitHealthMax(targetString)
-
-			if health > 0 and healthMax > 0 then
-				self.bossHealth = math.ceil((health / healthMax) * 100)
-
-				if self.bossHealth <= 85 and not self.hitEightyFive then
-					if self.seekersLeft > 0 then
-						self:Message(L["msg_seekerWarn"], "Important", nil, "Beware")
-					end
-					self.hitEightyFive = true
-				end
-				if self.bossHealth <= 38 and not self.curseWarned then
-					if self.db.profile.cursewarning then
-						self:Message(L["msg_curseWarning"], "Important", nil, "Alarm")
-					end
-					self.curseWarned = true
-				end
-				break
+		if percent <= 85 and not self.hitEightyFive then
+			if self.seekersLeft > 0 then
+				self:Message(L["msg_seekerWarn"], "Important", nil, "Beware")
 			end
+			self.hitEightyFive = true
+		end
+		if percent <= 38 and not self.curseWarned then
+			if self.db.profile.cursewarning then
+				self:Message(L["msg_curseWarning"], "Important", nil, "Alarm")
+			end
+			self.curseWarned = true
+			self:CancelScheduledEvent("CheckBossHealth")
 		end
 	end
 end
@@ -469,6 +469,9 @@ function module:BigWigs_RecvSync(sync, rest, nick)
 end
 
 function module:SummonSeeker()
+	self:CancelDelayedBar(L["bar_summonCD"])
+	self:RemoveBar(L["bar_summonCD"])
+	self.lastSeekerSummon = GetTime()
 	if self.db.profile.summonseeker then
 		self:Message(L["msg_summonSeeker"], "Attention")
 	end
@@ -477,6 +480,12 @@ end
 function module:SummonWhelps()
 	if self.db.profile.summonwhelps then
 		self:Message(L["msg_summonWhelps"], "Attention")
+	end
+	if self.db.profile.summoncd then
+		local delay = 5
+		local nextSeekerMin = timer.summonCD[1] + self.lastSeekerSummon - GetTime() - delay
+		local nextSeekerMax = timer.summonCD[2] + self.lastSeekerSummon - GetTime() - delay
+		self:DelayedIntervalBar(delay, L["bar_summonCD"], nextSeekerMin, nextSeekerMax, icon.summonCD, true, "White")
 	end
 end
 
@@ -494,10 +503,10 @@ function module:BlackAffinity()
 	if self.db.profile.affinity then
 		self:Message(L["msg_blackAffinity"], "Important", true, "Alarm")
 		self:WarningSign(icon.blackAffinity, 5, true, L["warn_blackAffinity"])
-		self:Bar(L["bar_blackAffinity"], timer.affinity, icon.blackAffinity)
+		self:ClickBar(L["bar_blackAffinity"], timer.affinity, icon.blackAffinity, L["unit_blackAffinity"])
 	end
 	if self.db.profile.targetBlack then
-		TargetByName(L["mob_blackAffinity"],true)
+		TargetByName(L["unit_blackAffinity"],true)
 	end
 end
 
@@ -505,10 +514,10 @@ function module:BlueAffinity()
 	if self.db.profile.affinity then
 		self:Message(L["msg_blueAffinity"], "Important", true, "Alarm")
 		self:WarningSign(icon.blueAffinity, 5, true, L["warn_blueAffinity"])
-		self:Bar(L["bar_blueAffinity"], timer.affinity, icon.blueAffinity)
+		self:ClickBar(L["bar_blueAffinity"], timer.affinity, icon.blueAffinity, L["unit_blueAffinity"])
 	end
 	if self.db.profile.targetBlue then
-		TargetByName(L["mob_blueAffinity"],true)
+		TargetByName(L["unit_blueAffinity"],true)
 	end
 end
 
@@ -516,10 +525,10 @@ function module:CrystalAffinity()
 	if self.db.profile.affinity then
 		self:Message(L["msg_crystalAffinity"], "Important", true, "Alarm")
 		self:WarningSign(icon.crystalAffinity, 5, true, L["warn_crystalAffinity"])
-		self:Bar(L["bar_crystalAffinity"], timer.affinity, icon.crystalAffinity)
+		self:ClickBar(L["bar_crystalAffinity"], timer.affinity, icon.crystalAffinity, L["unit_crystalAffinity"])
 	end
 	if self.db.profile.targetCrystal then
-		TargetByName(L["mob_crystalAffinity"],true)
+		TargetByName(L["unit_crystalAffinity"],true)
 	end
 end
 
@@ -527,10 +536,10 @@ function module:GreenAffinity()
 	if self.db.profile.affinity then
 		self:Message(L["msg_greenAffinity"], "Important", true, "Alarm")
 		self:WarningSign(icon.greenAffinity, 5, true, L["warn_greenAffinity"])
-		self:Bar(L["bar_greenAffinity"], timer.affinity, icon.greenAffinity)
+		self:ClickBar(L["bar_greenAffinity"], timer.affinity, icon.greenAffinity, L["unit_greenAffinity"])
 	end
 	if self.db.profile.targetGreen then
-		TargetByName(L["mob_greenAffinity"],true)
+		TargetByName(L["unit_greenAffinity"],true)
 	end
 end
 
@@ -538,10 +547,10 @@ function module:ManaAffinity()
 	if self.db.profile.affinity then
 		self:Message(L["msg_manaAffinity"], "Important", true, "Alarm")
 		self:WarningSign(icon.manaAffinity, 5, true, L["warn_manaAffinity"])
-		self:Bar(L["bar_manaAffinity"], timer.affinity, icon.manaAffinity)
+		self:ClickBar(L["bar_manaAffinity"], timer.affinity, icon.manaAffinity, L["unit_manaAffinity"])
 	end
 	if self.db.profile.targetMana then
-		TargetByName(L["mob_manaAffinity"],true)
+		TargetByName(L["unit_manaAffinity"],true)
 	end
 end
 
@@ -549,10 +558,10 @@ function module:RedAffinity()
 	if self.db.profile.affinity then
 		self:Message(L["msg_redAffinity"], "Important", true, "Alarm")
 		self:WarningSign(icon.redAffinity, 5, true, L["warn_redAffinity"])
-		self:Bar(L["bar_redAffinity"], timer.affinity, icon.redAffinity)
+		self:ClickBar(L["bar_redAffinity"], timer.affinity, icon.redAffinity, L["unit_redAffinity"])
 	end
 	if self.db.profile.targetRed then
-		TargetByName(L["mob_redAffinity"],true)
+		TargetByName(L["unit_redAffinity"],true)
 	end
 end
 
@@ -582,6 +591,8 @@ end
 
 function module:SurgeBar(player)
 	if self.db.profile.surgewarning then
+		self:ClickBar(string.format(L["bar_surge"], player), timer.surge, icon.surge, player, L["spell_surge"], true, "Cyan")
+		
 		local barText = string.format(L["bar_surge"], player)
 		self:Bar(barText, timer.surge, icon.surge, true, "Cyan")
 		
@@ -613,6 +624,9 @@ function module:Test()
 	self:OnSetup()
 	self:Engage()
 
+	local player1 = UnitName("raid1") or "Player1"
+	local player2 = UnitName("raid2") or "Player2"
+
 	local events = {
 		-- First Ley-Line around 1:15
 		{ time = 4, func = function()
@@ -631,11 +645,6 @@ function module:Test()
 			end
 		end },
 
-		-- Summon Seeker
-		{ time = 7, func = function()
-			print("Test: Ley-Watcher Incantagos begins to cast Summon Manascale Ley-Seeker")
-			module:BeginsCastEvent("Ley-Watcher Incantagos begins to cast Summon Manascale Ley-Seeker.")
-		end },
 		-- Kill one initial Seeker
 		{ time = 8, func = function()
 			local msg = "Manascale Ley-Seeker dies."
@@ -669,6 +678,11 @@ function module:Test()
 			module:CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_BUFFS("You gain Guided Ley-Beam (1).")
 		end },
 
+		-- Summon Seeker
+		{ time = 23, func = function()
+			print("Test: Ley-Watcher Incantagos begins to cast Summon Manascale Ley-Seeker")
+			module:BeginsCastEvent("Ley-Watcher Incantagos begins to cast Summon Manascale Ley-Seeker.")
+		end },
 		-- Summon Whelps
 		{ time = 25, func = function()
 			print("Test: Ley-Watcher Incantagos begins to cast Summon Manascale Whelps")
@@ -707,6 +721,17 @@ function module:Test()
 			module:BuffEvent("Player1 gains Crystal Affinity (1).")
 		end },
 
+		-- Summon Seeker 2
+		{ time = 58, func = function()
+			print("Test: Ley-Watcher Incantagos begins to cast Summon Manascale Ley-Seeker")
+			module:BeginsCastEvent("Ley-Watcher Incantagos begins to cast Summon Manascale Ley-Seeker.")
+		end },
+		-- Summon Whelps 2
+		{ time = 61, func = function()
+			print("Test: Ley-Watcher Incantagos begins to cast Summon Manascale Whelps")
+			module:BeginsCastEvent("Ley-Watcher Incantagos begins to cast Summon Manascale Whelps.")
+		end },
+
 		-- Second Ley-Line about 55s after first one
 		{ time = 65, func = function()
 			print("Test: Ley-Watcher Incantagos begins to cast Ley-Line Disturbance")
@@ -720,12 +745,12 @@ function module:Test()
 			self:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
 		end },
 		{ time = 68.5, func = function()
-			local msg = UnitName("raid1").." is afflicted by Surge of Mana."
+			local msg = player1.." is afflicted by Surge of Mana."
 			print("Test: " .. msg)
 			self:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE", msg)
 		end },
 		{ time = 68.7, func = function()
-			local msg = UnitName("raid2").." is afflicted by Surge of Mana."
+			local msg = player2.." is afflicted by Surge of Mana."
 			print("Test: " .. msg)
 			self:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE", msg)
 		end },
@@ -735,12 +760,12 @@ function module:Test()
 			self:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_SELF", msg)
 		end },
 		{ time = 72, func = function()
-			local msg = "Surge of Mana fades from "..UnitName("raid1").."."
+			local msg = "Surge of Mana fades from "..player1.."."
 			print("Test: " .. msg)
 			self:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_PARTY", msg)
 		end },
 		{ time = 73, func = function()
-			local msg = "Surge of Mana fades from "..UnitName("raid2").."."
+			local msg = "Surge of Mana fades from "..player2.."."
 			print("Test: " .. msg)
 			self:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_OTHER", msg)
 		end },
@@ -750,12 +775,12 @@ function module:Test()
 			self:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
 		end },
 		{ time = 77, func = function()
-			local msg = UnitName("raid1").." is afflicted by Surge of Mana."
+			local msg = player1.." is afflicted by Surge of Mana."
 			print("Test: " .. msg)
 			self:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE", msg)
 		end },
 		{ time = 79, func = function()
-			local msg = UnitName("raid1").." dies."
+			local msg = player2.." dies."
 			print("Test: " .. msg)
 			self:TriggerEvent("CHAT_MSG_COMBAT_FRIENDLY_DEATH", msg)
 		end },

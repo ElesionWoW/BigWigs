@@ -2,10 +2,18 @@ local module, L = BigWigs:ModuleDeclaration("Sorcerer-Thane Thaurissan", "Molten
 
 module.revision = 30003
 module.enabletrigger = module.translatedName
-module.toggleoptions = { "runetimers", "runeofdetonation", "runeofcombustion", "bosskill" }
+module.toggleoptions = {"runetimers", "runeofdetonation", "runeofcombustion", "floorwarn", "bosskill"}
 module.zonename = {
 	AceLibrary("AceLocale-2.2"):new("BigWigs")["Molten Core"],
 	AceLibrary("Babble-Zone-2.2")["Molten Core"],
+}
+
+-- module defaults
+module.defaultDB = {
+	runetimers = true,
+	runeofdetonation = true,
+	runeofcombustion = true,
+	floorwarn = true,
 }
 
 L:RegisterTranslations("enUS", function() return {
@@ -17,11 +25,15 @@ L:RegisterTranslations("enUS", function() return {
 
 	runeofdetonation_cmd = "runeofdetonation",
 	runeofdetonation_name = "Rune of Detonation Alert",
-	runeofdetonation_desc = "Personal alert when you have both Rune of Detonation and Rune of Power",
+	runeofdetonation_desc = "Personal alert for Rune of Detonation whether you are correctly outside of the Rune of Power (floor zone)",
 
 	runeofcombustion_cmd = "runeofcombustion",
 	runeofcombustion_name = "Rune of Combustion Alert",
-	runeofcombustion_desc = "Personal alert when you have Rune of Combustion and not Rune of Power",
+	runeofcombustion_desc = "Personal alert for Rune of Combustion whether you are correctly inside of the Rune of Power (floor zone)",
+
+	floorwarn_cmd = "floorwarn",
+	floorwarn_name = "Rune of Power Warning",
+	floorwarn_desc = "Warns shortly before Rune of Power (floor zone) is recast in a new location (every 25% of boss HP); must be enabled before pull",
 
 	trigger_detonation = "afflicted by Rune of Detonation",
 	trigger_combustion = "afflicted by Rune of Combustion",
@@ -32,21 +44,25 @@ L:RegisterTranslations("enUS", function() return {
 	trigger_runeOfPowerYou = "You are afflicted by Rune of Power",
 	trigger_runeOfPowerFade = "Rune of Power fades from you",
 
-	msg_detonation = "Get/Stay out of the Zone - Rune of Detonation",
-	msg_combustion = "Get/Stay in the Zone - Rune of Combustion",
-	msg_combustion_out_of_zone = "Get back into the Zone!!!",
-	msg_detonation_in_zone = "Get back out of the Zone!!!",
+	msg_detonation = "Move out of the Zone - Rune of Detonation",
+	msg_detonationSolved = "Stay out of the Zone - Rune of Detonation",
+	msg_combustion = "Get into the Zone - Rune of Combustion",
+	msg_combustionSolved = "Stay in the Zone - Rune of Combustion",
 	bar_runeDetonation = "Detonation (move out)",
 	bar_runeCombustion = "Combustion (get in)",
-	bar_detonationNext = "Next Detonation Rune",
-	bar_combustionNext = "Next Combustion Rune",
-	warn_detonation = "MOVE_OUT",
-	warn_combustion = "GET_IN",
+	bar_detonationNext = "next Detonation Rune",
+	bar_combustionNext = "next Combustion Rune",
+	warn_detonation = "MOVE OUT",
+	warn_combustion = "GET IN",
+	
+	msg_floorwarn = "Floor Zone moving soon! %s%%",
 } end)
 
 local hasRuneOfDetonation = false
 local hasRuneOfPower = false
 local hasRuneOfCombustion = false
+local nextFloorWarn = 75
+local floorWarn = 3 -- how many % of HP before the recast the warning triggers
 
 local timer = {
 	runeCooldown = { 18, 22 }, -- average of 20
@@ -65,6 +81,9 @@ local syncName = {
 	runeDetonation = "MCThaurissanDetonation" .. module.revision,
 	runeCombustion = "MCThaurissanCombusion" .. module.revision,
 }
+local guid = {
+	thaurissan = "0xF13000E12A278C49",
+}
 
 function module:OnEnable()
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", "Event")
@@ -80,15 +99,20 @@ function module:OnSetup()
 	hasRuneOfDetonation = false
 	hasRuneOfPower = false
 	hasRuneOfCombustion = false
+	nextFloorWarn = 75
 end
 
 function module:OnEngage()
 	hasRuneOfDetonation = false
 	hasRuneOfPower = false
 	hasRuneOfCombustion = false
+	nextFloorWarn = 75
 
 	if self.db.profile.runetimers then
 		self:IntervalBar(L["bar_detonationNext"], timer.runeCooldown[1], timer.runeCooldown[2], icon.runeDetonation, true, color.runeUpcoming)
+	end
+	if self.db.profile.floorwarn then
+		self:ScheduleRepeatingEvent("ThaurissanHealthCheck", self.CheckHealth, 0.25, self)
 	end
 end
 
@@ -96,6 +120,8 @@ function module:OnDisengage()
 	hasRuneOfDetonation = false
 	hasRuneOfPower = false
 	hasRuneOfCombustion = false
+	nextFloorWarn = 75
+	self:CancelScheduledEvent("ThaurissanHealthCheck")
 end
 
 function module:Event(msg)
@@ -104,42 +130,36 @@ function module:Event(msg)
 		self:Sync(syncName.runeDetonation)
 		if string.find(msg, L["trigger_you"]) then
 			hasRuneOfDetonation = true
-
-			self:Message(L["msg_detonation"], "Personal")
-			self:Sound("RunAway")
-			self:WarningSign(icon.runeDetonation, timer.runeDuration, false, L["warn_detonation"])
+			self:CheckRuneCombination()
 		end
+		return
 	elseif string.find(msg, L["trigger_runeOfDetonationFade"]) then
 		hasRuneOfDetonation = false
-		-- clear warning sign and bar
-		self:RemoveBar(L["bar_runeDetonation"])
-		self:RemoveWarningSign(icon.runeDetonation)
+		self:CheckRuneCombination()
+		return
 
-		-- Rune of Combustion
+	-- Rune of Combustion
 	elseif string.find(msg, L["trigger_combustion"]) then
 		self:Sync(syncName.runeCombustion)
 		if string.find(msg, L["trigger_you"]) then
 			hasRuneOfCombustion = true
-
-			self:Message(L["msg_combustion"], "Personal")
-			self:Sound("Beware")
-			self:WarningSign(icon.runeCombustion, timer.runeDuration, false, L["warn_combustion"])
+			self:CheckRuneCombination()
 		end
+		return
 	elseif string.find(msg, L["trigger_runeOfCombustionFade"]) then
 		hasRuneOfCombustion = false
-		-- Rune of Power (floor zone)
+		self:CheckRuneCombination()
+		return
+
+	-- Rune of Power (floor zone)
 	elseif string.find(msg, L["trigger_runeOfPowerYou"]) then
 		hasRuneOfPower = true
-		if hasRuneOfDetonation and self.db.profile.runeofdetonation then
-			self:Message(L["msg_detonation_in_zone"], "Personal")
-			self:Sound("RunAway")
-		end
+		self:CheckRuneCombination()
+		return
 	elseif string.find(msg, L["trigger_runeOfPowerFade"]) then
 		hasRuneOfPower = false
-		if hasRuneOfCombustion and self.db.profile.runeofcombustion then
-			self:Message(L["msg_combustion_out_of_zone"], "Personal")
-			self:Sound("Beware")
-		end
+		self:CheckRuneCombination()
+		return
 	end
 end
 
@@ -148,6 +168,34 @@ function module:BigWigs_RecvSync(sync, rest, nick)
 		self:DetonationCast()
 	elseif sync == syncName.runeCombustion then
 		self:CombustionCast()
+	end
+end
+
+function module:CheckRuneCombination()
+	--print("DEBUG: check with detonation "..tostring(hasRuneOfDetonation)..", combustion "..tostring(hasRuneOfCombustion)..", power "..tostring(hasRuneOfPower))
+
+	if hasRuneOfDetonation and self.db.profile.runeofdetonation then
+		if hasRuneOfPower then
+			self:Message(L["msg_detonation"], "Personal", nil, "RunAway")
+			self:WarningSign(icon.runeDetonation, timer.runeDuration, false, L["warn_detonation"])
+		else
+			self:Message(L["msg_detonationSolved"], "Positive", nil, "Long")
+			self:RemoveWarningSign(icon.runeDetonation)
+		end
+	else
+		self:RemoveWarningSign(icon.runeDetonation)
+	end
+
+	if hasRuneOfCombustion and self.db.profile.runeofcombustion then
+		if not hasRuneOfPower then
+			self:Message(L["msg_combustion"], "Personal", nil, "Beware")
+			self:WarningSign(icon.runeCombustion, timer.runeDuration, false, L["warn_combustion"])
+		else
+			self:Message(L["msg_combustionSolved"], "Positive", nil, "Long")
+			self:RemoveWarningSign(icon.runeCombustion)
+		end
+	else
+		self:RemoveWarningSign(icon.runeCombustion)
 	end
 end
 
@@ -173,184 +221,100 @@ function module:DetonationCast()
 	end
 end
 
+function module:CheckHealth()
+	if UnitExists(guid.thaurissan) and nextFloorWarn > 0 then
+		local percent = math.ceil(100*(UnitHealth(guid.thaurissan)/UnitHealthMax(guid.thaurissan)))
+		if percent <= (nextFloorWarn + floorWarn) then
+			if self.db.profile.floorwarn then
+				self:Message(string.format(L["msg_floorwarn"], nextFloorWarn), "Attention")
+			end
+			nextFloorWarn = nextFloorWarn - 25
+		end
+	else
+		self:CancelScheduledEvent("ThaurissanHealthCheck")
+	end
+end
+
 function module:Test()
 	-- Initialize module state
 	self:Engage()
 
 	local events = {
-		-- ==== Test Case 1: Detonation while OUTSIDE zone ====
-		{ time = 3, func = function()
-			print("=== Case 1: Detonation while OUTSIDE zone ===")
-		end },
-		{ time = 5, func = function()
-			local msg = "You are afflicted by Rune of Detonation."
-			print("Test: " .. msg)
-			print("Expected: Base detonation alert only")
-			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
-		end },
-		{ time = 8, func = function()
-			local msg = "Raider is afflicted by Rune of Detonation."
-			print("Test: " .. msg .. " (sync test)")
-			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE", msg)
-		end },
-		{ time = 11, func = function()
-			local msg = "Rune of Detonation fades from you."
-			print("Test: " .. msg)
-			print("Expected: Alert clears")
-			module:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_SELF", msg)
-		end },
-
-		-- ==== Test Case 2: Detonation while INSIDE zone ====
-		{ time = 14, func = function()
-			print("=== Case 2: Detonation while INSIDE zone ===")
-		end },
-		{ time = 15, func = function()
+		-- Gaining Rune of Power (no alert expected)
+		{ time = 20, func = function()
 			local msg = "You are afflicted by Rune of Power."
 			print("Test: " .. msg)
-			print("Expected: No alert")
 			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
 		end },
-		{ time = 17, func = function()
+		-- Late first cast
+		-- Gaining Rune of Detonation while having Rune of Power (ALERT EXPECTED)
+		{ time = 22, func = function()
 			local msg = "You are afflicted by Rune of Detonation."
 			print("Test: " .. msg)
-			print("Expected: Base detonation alert + 'in zone' alert (2 alerts)")
 			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
-		end },
-		{ time = 20, func = function()
-			local msg = "Rune of Power fades from you."
-			print("Test: " .. msg)
-			print("Expected: No extra alert (now in correct state)")
-			module:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_SELF", msg)
 		end },
 		{ time = 22, func = function()
-			local msg = "Rune of Detonation fades from you."
+			local msg = "Raider is afflicted by Rune of Detonation."
 			print("Test: " .. msg)
-			print("Expected: Alert clears")
-			module:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_SELF", msg)
-		end },
-
-		-- ==== Test Case 3: Get Power while having Detonation ====
-		{ time = 25, func = function()
-			print("=== Case 3: Enter zone while having Detonation ===")
-		end },
-		{ time = 26, func = function()
-			local msg = "You are afflicted by Rune of Detonation."
-			print("Test: " .. msg)
-			print("Expected: Base detonation alert only")
-			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
-		end },
-		{ time = 28, func = function()
-			local msg = "You are afflicted by Rune of Power."
-			print("Test: " .. msg .. " (entering zone)")
-			print("Expected: 'In zone' alert")
-			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
-		end },
-		{ time = 31, func = function()
-			local msg = "Rune of Detonation fades from you."
-			print("Test: " .. msg)
-			module:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_SELF", msg)
-		end },
-		{ time = 32, func = function()
-			local msg = "Rune of Power fades from you."
-			print("Test: " .. msg)
-			module:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_SELF", msg)
-		end },
-
-		-- ==== Test Case 4: Combustion while OUTSIDE zone ====
-		{ time = 35, func = function()
-			print("=== Case 4: Combustion while OUTSIDE zone ===")
-		end },
-		{ time = 36, func = function()
-			local msg = "You are afflicted by Rune of Combustion."
-			print("Test: " .. msg)
-			print("Expected: Base combustion alert + 'out of zone' alert (2 alerts)")
-			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
-		end },
-		{ time = 39, func = function()
-			local msg = "Sorcerer-Thane Thaurissan's Rune of Combustion fails. Raider is immune."
-			print("Test: " .. msg .. " (sync test)")
 			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE", msg)
 		end },
-		{ time = 42, func = function()
-			local msg = "Rune of Combustion fades from you."
+		-- Losing Rune of Power while keeping Rune of Detonation (alert icon should clear)
+		{ time = 24, func = function()
+			local msg = "Rune of Power fades from you."
 			print("Test: " .. msg)
-			print("Expected: State clears")
 			module:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_SELF", msg)
 		end },
-
-		-- ==== Test Case 5: Combustion while INSIDE zone ====
-		{ time = 45, func = function()
-			print("=== Case 5: Combustion while INSIDE zone ===")
-		end },
-		{ time = 46, func = function()
+		-- Regaining Rune of Power while having Rune of Detonation (ALERT EXPECTED)
+		{ time = 26, func = function()
 			local msg = "You are afflicted by Rune of Power."
 			print("Test: " .. msg)
-			print("Expected: No alert")
 			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
 		end },
-		{ time = 48, func = function()
-			local msg = "You are afflicted by Rune of Combustion."
-			print("Test: " .. msg)
-			print("Expected: Base combustion alert only (already in zone)")
-			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
-		end },
-		{ time = 51, func = function()
-			local msg = "Rune of Combustion fades from you."
+		-- Losing Rune of Detonation (alert icon should clear)
+		{ time = 28, func = function()
+			local msg = "Rune of Detonation fades from you."
 			print("Test: " .. msg)
 			module:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_SELF", msg)
 		end },
-		{ time = 52, func = function()
+		-- Clear Rune of Power for next test
+		{ time = 30, func = function()
 			local msg = "Rune of Power fades from you."
 			print("Test: " .. msg)
 			module:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_SELF", msg)
 		end },
 
-		-- ==== Test Case 6: Leave zone while having Combustion ====
-		{ time = 55, func = function()
-			print("=== Case 6: Leave zone while having Combustion ===")
+		-- Early second cast
+		{ time = 40, func = function()
+			local msg = "You are afflicted by Rune of Combustion."
+			print("Test: " .. msg)
+			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
 		end },
-		{ time = 56, func = function()
+		{ time = 40, func = function()
+			local msg = "Sorcerer-Thane Thaurissan's Rune of Combustion fails. Raider is immune."
+			print("Test: " .. msg)
+			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE", msg)
+		end },
+		-- Walk into zone
+		{ time = 44, func = function()
 			local msg = "You are afflicted by Rune of Power."
 			print("Test: " .. msg)
 			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
 		end },
-		{ time = 57, func = function()
-			local msg = "You are afflicted by Rune of Combustion."
-			print("Test: " .. msg)
-			print("Expected: Base combustion alert only")
-			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
-		end },
-		{ time = 59, func = function()
-			local msg = "Rune of Power fades from you."
-			print("Test: " .. msg .. " (leaving zone)")
-			print("Expected: 'Out of zone' alert")
-			module:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_SELF", msg)
-		end },
-		{ time = 62, func = function()
-			local msg = "Rune of Combustion fades from you."
-			print("Test: " .. msg)
-			module:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_SELF", msg)
-		end },
 
-		-- ==== Test Case 7: Edge cases - resists and immunities ====
-		{ time = 65, func = function()
-			print("=== Case 7: Resists and immunities ===")
-		end },
-		{ time = 66, func = function()
+		-- Third cast
+		{ time = 60, func = function()
 			local msg = "Sorcerer-Thane Thaurissan's Rune of Detonation was resisted by you."
 			print("Test: " .. msg)
-			print("Expected: No personal alert (resisted)")
 			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
 		end },
-		{ time = 68, func = function()
+		{ time = 60, func = function()
 			local msg = "Raider is afflicted by Rune of Detonation."
-			print("Test: " .. msg .. " (another player)")
+			print("Test: " .. msg)
 			module:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE", msg)
 		end },
 
 		-- End of Test
-		{ time = 70, func = function()
-			print("=== Test Complete ===")
+		{ time = 65, func = function()
 			print("Test: Disengage")
 			module:Disengage()
 		end },
@@ -361,8 +325,7 @@ function module:Test()
 		self:ScheduleEvent("ThaurissanTest" .. i, event.func, event.time)
 	end
 
-	self:Message("Thaurissan comprehensive test started - 7 test cases", "Positive")
-	print("Test will run for 70 seconds and cover all Event() logic paths")
+	self:Message("Thaurissan test started", "Positive")
 	return true
 end
 

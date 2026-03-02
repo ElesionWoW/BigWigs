@@ -158,8 +158,9 @@ L:RegisterTranslations("enUS", function()
 		bar_subservience = "Go right in front of Queen and Bow! >Click Me<",
 		bar_kingsfury = "King's Fury - Hide!",
 		bar_charmingpresence = "Next Charming Presence",
-		bar_decursebow = "Decurse %s >Click Me<",
-		bar_curseCD = "possible King's Curse",
+		bar_decursebow = (playerClass=="MAGE" and ">Decurse %s!< for /bow") or (playerClass=="DRUID" and ">Decurse %s!< for bow") or "Decurse %s for /bow",
+		spell_decursebow = (playerClass=="MAGE" and "Remove Lesser Curse") or (playerClass=="DRUID" and "Remove Curse") or false,
+		bar_curseCD = "King's Curse on CD",
 
 		bishop_name = "Bishop",
 		bishop_needsTongues = "Bishop needs Curse of Tongues!",
@@ -247,16 +248,13 @@ function module:OnEnable()
 	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_PARTY", "FadesEvent")
 	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_OTHER", "FadesEvent")
 
-	self:RegisterEvent("CHAT_MSG_MONSTER_EMOTE", "CastEvent")
-	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE", "CastEvent")
-	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_BUFF", "CastEvent")
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE", "SpellEvent")
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_PARTY_DAMAGE", "SpellEvent")
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE", "SpellEvent")
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_BUFF", "SpellEvent")
 
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_CREATURE_BUFFS", "EnemyDebuffEvent")
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE", "EnemyDebuffEvent")
-
-	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE", "SpellHitEvent")
-	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_PARTY_DAMAGE", "SpellHitEvent")
-	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE", "SpellHitEvent")
 
 	if self.db.profile.bishoptonguesalert then
 		self:ScheduleRepeatingEvent("BishopDebuffScan", self.ScanBishopDebuffs, timer.bishopScan, self)
@@ -366,7 +364,7 @@ function module:RookCastEvent(casterGuid, targetGuid, eventType, spellId, castTi
 	end
 end
 
-function module:CastEvent(msg)
+function module:SpellEvent(msg)
 	if string.find(msg, L["trigger_subservienceFailed"]) and self.queenTarget ~= "" then
 		self:Sync(syncName.subservienceFailed .. " " .. self.queenTarget)
 	elseif string.find(msg, L["trigger_kingCastFury"]) then
@@ -378,6 +376,12 @@ function module:CastEvent(msg)
 		self:Sync(syncName.sbvolleyCast)
 	elseif self.db.profile.empoweredsb and string.find(msg, L["trigger_empoweredCast"]) then
 		self:Message(L["msg_empoweredCast"], "Urgent", nil, "Info")		
+	end
+	if self.db.profile.printchess then
+		local _,_,player,amount = string.find(msg, L["trigger_kingsFuryHit"])
+		if player and amount and tonumber(amount) > 8000 then
+			print(msg)
+		end
 	end
 end
 
@@ -516,15 +520,6 @@ function module:OnFriendlyDeath(msg)
 	end
 end
 
-function module:SpellHitEvent(msg)
-	if self.db.profile.printchess then
-		local _,_,player,amount = string.find(msg, L["trigger_kingsFuryHit"])
-		if player and amount and tonumber(amount) > 8000 then
-			print(msg)
-		end
-	end
-end
-
 function module:BigWigs_RecvSync(sync, rest, nick)
 	if sync == syncName.subservience and rest and rest ~= UnitName("player") then
 		self:Subservience(rest)
@@ -636,7 +631,7 @@ function module:Subservience(player)
 					if texture then
 						if texture == kingsCurseTexture then
 							-- Player has King's Curse, show decurse reminder
-							self:DecurseReminder(player, raidTarget)
+							self:DecurseReminder(player)
 							break
 						end
 					else
@@ -657,32 +652,12 @@ function module:Subservience(player)
 	end
 end
 
-function module:DecurseReminder(player, raidTarget)
+function module:DecurseReminder(player)
 	if not self.db.profile.decursebow then
 		return
 	end
 
-	-- Create a bar with decurse functionality
-	local barText = string.format(L["bar_decursebow"], player)
-	self:Bar(barText, timer.subservience, icon.kingscurse)
-
-	-- Set the bar to target player and cast Remove Curse when clicked
-	self:SetCandyBarOnClick("BigWigsBar " .. barText, function(name, button, playerName, target)
-		if SUPERWOW_VERSION or SetAutoloot then
-			if playerClass == "MAGE" then
-				CastSpellByName("Remove Lesser Curse", target)
-			elseif playerClass == "DRUID" then
-				CastSpellByName("Remove Curse", target)
-			end
-		else
-			TargetByName(playerName, true)
-			if playerClass == "MAGE" then
-				CastSpellByName("Remove Lesser Curse")
-			elseif playerClass == "DRUID" then
-				CastSpellByName("Remove Curse")
-			end
-		end
-	end, player, raidTarget)
+	self:ClickBar(string.format(L["bar_decursebow"], player), timer.subservience, icon.kingscurse, player, L["spell_decursebow"])
 end
 
 function module:KingCastFury()
@@ -848,7 +823,7 @@ function module:Test()
 		{ time = 12, func = function()
 			local msg = testPlayerName1 .. " is afflicted by Dark Subservience"
 			module:AfflictionEvent(msg)
-			module:DecurseReminder(testPlayerName1, "raid1")
+			module:DecurseReminder(testPlayerName1)
 			print("Test: " .. msg)
 		end },
 
@@ -868,7 +843,7 @@ function module:Test()
 		-- Test SBV from Bishop
 		{ time = 22, func = function()
 			local msg = "Bishop begins to cast Shadow Bolt Volley"
-			module:CastEvent(msg)
+			module:SpellEvent(msg)
 			print("Test: " .. msg)
 		end },
 
@@ -881,7 +856,7 @@ function module:Test()
 
 		{ time = 25, func = function()
 			local msg = "Dark Subservience fails. Grounding Totem"
-			module:CastEvent(msg)
+			module:SpellEvent(msg)
 			print("Test: " .. msg)
 		end },
 
@@ -895,7 +870,7 @@ function module:Test()
 		-- King's Fury event
 		{ time = 28, func = function()
 			local msg = "King begins to cast King’s Fury"
-			module:CastEvent(msg)
+			module:SpellEvent(msg)
 			print("Test: " .. msg)
 		end },
 
@@ -903,7 +878,7 @@ function module:Test()
 		{ time = 30, func = function()
 			local msg = testPlayerName2 .. " is afflicted by Dark Subservience"
 			module:AfflictionEvent(msg)
-			module:DecurseReminder(testPlayerName2, "raid2")
+			module:DecurseReminder(testPlayerName2)
 			print("Test: " .. msg)
 		end },
 
@@ -957,7 +932,7 @@ function module:Test()
 		-- King's Fury event
 		{ time = 36, func = function()
 			local msg = "King begins to cast King’s Fury"
-			module:CastEvent(msg)
+			module:SpellEvent(msg)
 			print("Test: " .. msg)
 		end },
 
@@ -970,20 +945,20 @@ function module:Test()
 		-- Test SBV from Bishop with full length
 		{ time = 38, func = function()
 			local msg = "Bishop begins to cast Shadow Bolt Volley"
-			module:CastEvent(msg)
+			module:SpellEvent(msg)
 			print("Test: " .. msg)
 		end },
 
 		-- King's Fury hit
 		{ time = 38, func = function()
 			local msg = "King's King’s Fury hits Bob for 18000 Holy damage."
-			module:SpellHitEvent(msg)
+			module:SpellEvent(msg)
 			print("Test: " .. msg)
 		end },
 
 		{ time = 39, func = function()
 			local msg = "King's King’s Fury hits BobsPet for 3600 Holy damage."
-			module:SpellHitEvent(msg)
+			module:SpellEvent(msg)
 			print("Test: " .. msg)
 		end },
 

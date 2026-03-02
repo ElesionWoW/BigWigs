@@ -86,10 +86,7 @@ function module:BigWigs_RecvSync(sync, rest, nick)
 end
 
 function module:NetherPortal()
-	self:Bar(L["bar_netherPortal"], timer.netherPortal, icon.netherPortal)
-	self:SetCandyBarOnClick("BigWigsBar " .. L["bar_netherPortal"], function(name, button)
-			TargetByName(L["unit_EyeOfKilrogg"], true)
-		end)
+	self:ClickBar(L["bar_netherPortal"], timer.netherPortal, icon.netherPortal, L["unit_EyeOfKilrogg"])
 	self:WarningSign(icon.eye, timer.netherPortal)
 	self:Sound("Beware")
 end

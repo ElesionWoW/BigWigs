@@ -1,26 +1,36 @@
 # BigWigs Golden Edition
 Big updates to K40 and MC (**check your boss settings!**), small fixes and updates here and there. Mostly tested.
+
+Updates are summarized in the [changelog](https://github.com/ElesionWoW/BigWigs/blob/master/documentation/changelog.txt). Details are in individual commits.
 ## Karazhan 40 - Highlights
 * Trash - many additional mobs and mechanics (including "don't move" and "don't cast")
 * Keeper - accurate Owl phase timer
-* Incantagos - Affinity auto-targeting, Surge of Mana victim bars, Blizzard warning
+* Incantagos - target Affinities automatically or by clicking on the timer bar, Surge of Mana victim bars, Blizzard warning
 * Anomalus - Floor Zone warnings
 * Echo - additional warnings, optional timers to align Resto Pot usage
 * Chess - accurate cast bars (hide, SBV), Curse CD (to allign hide phases)
-* Sanv - bar for add phase duration
-* Rupturan - alert when you stand in fire
+* Sanv - bar for add phase duration, warn about last Curse before Feedback
+* Rupturan - Boulder target warnings, P1 kill window, alert when you stand in fire, monitoring of Felheart mana
 * Mephistroth - Doom bar, purge alert, better Shards handling, sound cue on Shackle fade
 ## Other Feature Highlights
 * Announcing bars to /raid now requires a Shift-click to prevent accidental spam.
-* AQ40 - C'Thun map fix
-* Ragnaros - warn about tank knockback
+* AQ40 - C'Thun map fix, vastly improved monitoring of Stomach Tentacles
+* MC - warning about tank knockback at Ragnaros, improved information at Thaurissan
 * ZG & AQ20 - minor fixes
 * DM North - Kromcrush fixes, new Eye of Kilrogg module
 ## Future Ideas
+* ClickBar - Update more modules, add class-based CC options to all mind-control effects.
+* MonitorBar - Update more modules: Thekal (health), Moam (mana), Thaddius (health).
+* Mandokir & Buru - Properly fix rare concat errors.
+* Keeper Gnarlmoon - Identify Owls by location.
 * Chess - Keep track of major piece health and announce every % below 5.
-* Centralize bar OnClick behavior for targeting and spell casting (for easier setup and so custom bars can be right-clicked to cancel them).
-* A timer bar for temporary flying mounts.
-* A new bar type for mob HP.
+* Thaurissan - Are timer bars for Knockback CD feasible and helpful?
+* Rend Blackhand - Fix the event timer bars.
+* CommonAura plugin - Add a timer bar for temporary flying mounts.
+* CommonAura plugin - Add a timer bar for Tranquility from raid members.
+* CandyBar library - Potentially unregister Mouse4 and Mouse5 so they aren't captured anymore if the cursor happens to be above a bar.
+* CommonAura plugin - Look into the bug that some players sync numbers as their targets (eg Fear Ward bar).
+* Core - figure out a (non-SuperWoW) way to capture buffs/debuffs/stacks refreshing since it doesn't trigger a combat log entry.
 ## Karazhan 40 - Full Changelog
 Relative to pepopo978's BigWigs.
 ### General
@@ -44,12 +54,13 @@ Relative to pepopo978's BigWigs.
 * Added warning sign to Affinity summon.
 * Proximity window is now off by default.
 * Added Blizzard warning (default: on).
-* Added Affinity auto-targeting (default: off).
+* Added Affinity auto-targeting (default: off). Can also click the Affinity timer bar to target.
 * Shortened some overly verbose Affinity messages.
 * Added Berserk warning (always on).
 * Added personal bars for every Surge of Mana victim (default: on; click bar to target victim, if paladin also to cast Hand of Freedom), /say announcement by victims (default: on).
 * Keep track of initial Ley-Seeker adds and warn if any are alive when boss it at 85% HP (always on).
 * Based the initial CD bar for Ley-Line Disturbance on the death of the fourth add and shortened CD bar (lowest observed in logs is 45s instead of 55s).
+* Added cooldown bar for the next wave of summons (default: off) (idea by [DCV-2142](https://github.com/DCV-2142/BigWigs)).
 ### Anomalus
 * Added message on /raid when using Death Wish and dropping below 200 AR (always on).
 * Personal Arcane Overload (bomb) warnings will now always show. The Arcane Overload setting now only handles other players, skull marking, cooldown bars.
@@ -83,10 +94,17 @@ Relative to pepopo978's BigWigs.
 * Added alerts for Portal Opening and Enrage (always on).
 * Added timer bar for add phase (default: on).
 * Phase Shifted alerts now only trigger below 80% boss HP.
+* Added Curse cooldown (default: off) and Rift Feedback cooldown (default: off) bars (largely by [DCV-2142](https://github.com/DCV-2142/BigWigs)).
+* Added warning to the last Curse before a Rift Feedback (default: on).
 ### Rupturan
 * Added personal warning to move out of Ignite Rock flamestrike area (default: on).
 * Added Reform timers when Fragments are defeated (default: on).
 * Added alternate triggers to no longer depend on SuperWoW cast events.
+* Added Throw Boulder mechanic - warn about the current target (default: off), mark the current target with Moon (default: on), announce incoming Boulder and Boulder miss to /say if you are the target (default: on)
+* Added Window of Opportunity handling below 15% HP boss HP in phase 1 by keeping track of Living Stone spawns to avoid Explode (default: on).
+* Added alert for high Felheart mana (default: on).
+* Added Felheart mana bar (default: on for priests, warlocks, hunters).
+* Added Ignite Earth timers (P1 flamestrike; default: off) (idea by [DCV-2142](https://github.com/DCV-2142/BigWigs)).
 ### Mephistroth
 * Added duration bar for Doom (default: on for druid/mage, off for everyone else), which is clickable to decurse the current Doom victim.
 * Added purge alert for Vampiric Aura (default: on for shaman/priest, off for everyone else).
@@ -97,8 +115,23 @@ Relative to pepopo978's BigWigs.
 * Tattle option also prints to the default chat window.
 * Added alternate triggers to greatly reduce the reliance on SuperWoW cast events.
 * Added mark (default: on) and alert with sound cue (default: off) about the current Waking Nightmare target to indicate Crawler spawn point for OTs.
+* Added bars for minimum Shackles cooldown (default: on) and Fear cooldown (default: off) (largely by [DCV-2142](https://github.com/DCV-2142/BigWigs)).
 
 Kruul is unchanged for now.
+### Internal Changes
+Check out the documentation subfolder for further information on many features.
+* Full support for forking.
+* New helper functions added to Core: BuffNameByIndex(), GetUnitIdByName(), GetTargetByName(), GetGUIDByName(), OffsetGUID(), RaidTargetLookup().
+* Expanded Bars plugin to add emphasis toggle, streamlined OnClick handling, and a new dynamically updating MonitorBar.
+* Updated Babble-Zone and Babble-Boss libraries with TWoW custom names.
+### Design Principles for Contributing
+* Avoid relying on client mods. - Where possible provide alternate triggers that don't require client mods (like SuperWoW).
+* Give players options. - Create sensible and granular settings. If a feature is only relevant to few people, do still include it but default it to off.
+* Provide actionable information that is easy to parse. - BigWigs should serve relevant information in high-pressure situations without distracting users. Examples: For an alert "Run away - Corruption!" is better than "There is Corruption of Medivh on you, you should get out of the raid". For a bar text "Alice MC" is more helpful than "Chains of Kel'Thuzad on Alice". [sidenote: this is mostly for new features; for old features there is value in keeping alerts people have grown used to]
+* Calls to action should have sound cues. - Not everyone plays with sound, but those that do rely on it.
+* Field-test your updates. - Never push major updates that you haven't verified in-game.
+
+If you (broadly) heed those principles I do welcome well-crafted pull requests! But please be patient and don't expect immediate reactions. BigWigs is a low-priority project for me.
 
 # BigWigs (legacy description)
 BigWigs is a World of Warcraft AddOn to predict certain AI behaviour to improve the players performance.<br>

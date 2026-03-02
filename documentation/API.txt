@@ -1,0 +1,78 @@
+
+-------------------
+modulePrototype API
+-------------------
+
+module:OnSetup()
+module:OnEngage()
+module:OnDisengage()
+
+module:Sync(sync)
+module:DelayedSync(delay, sync)
+module:CancelDelayedSync(sync)
+module:ThrottleSync(throttle, sync)
+
+module:Message(text, priority, noRaidSay, sound, broadcastOnly)
+module:DelayedMessage(delay, text, priority, noRaidSay, sound, broadcastOnly)
+module:CancelDelayedMessage(text)
+
+module:Bar(text, time, icon, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, emphasize, target, spell)
+module:RemoveBar(text)
+module:DelayedBar(delay, text, time, icon, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, emphasize, target, spell)
+module:CancelDelayedBar(text)
+
+module:IntervalBar(text, intervalMin, intervalMax, icon, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
+module:DelayedIntervalBar(delay, text, intervalMin, intervalMax, icon, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
+
+module:ClickBar(text, time, icon, target, spell, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, emphasize)
+module:DelayedClickBar(delay, text, time, icon, target, spell, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, emphasize)
+
+module:MonitorBar(barName, icon, guid, type, displayText, insertMark, emphazise, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
+module:DelayedMonitorBar(delay, barName, icon, guid, type, displayText, insertMark, emphazise, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
+
+registered, time, elapsed, running = module:BarStatus(text)
+
+module:Sound(sound)
+module:DelayedSound(delay, sound, id)
+module:CancelDelayedSound(sound, id)
+
+module:Icon(name, iconnumber)
+module:RemoveIcon()
+
+module:WarningSign(icon, duration, force, text)
+module:RemoveWarningSign(icon, forceHide)
+module:DelayedWarningSign(delay, icon, duration, id)
+module:CancelDelayedWarningSign(icon, id)
+
+module:Say(msg)
+
+module:Proximity()
+module:RemoveProximity()
+
+module:SetRaidTargetForPlayer(player, mark) -- mark can be index or name
+module:GetAvailableRaidMark(excludeMarks, reverse)
+module:RestorePreviousRaidTargetForPlayer(player)
+module:RestoreInitialRaidTargetForPlayer(player)
+
+module:OnEnemyDeath(msg) -- do not register CHAT_MSG_COMBAT_HOSTILE_DEATH
+module:OnFriendlyDeath(msg) -- do not register CHAT_MSG_COMBAT_FRIENDLY_DEATH
+
+module:SendBossDeathSync()
+
+
+----------------
+Helper Functions
+----------------
+
+BigWigs:CancelAuraId(spellId) -- requires SuperWoW
+BigWigs:CancelAuraTexture(texture)
+BigWigs:BuffNameByIndex(buffIndex) -- returns localized name from tooltip
+
+-- depth (integer) specifies which units to scan (0 = raidN, 1 = raidNtarget, 2 = raidNtargettarget, etc). 
+BigWigs:GetUnitIdByName(name, depth) -- returns "raidN", "raidNtarget", etc
+BigWigs:GetTargetByName(name, depth) -- returns "targetName" of named unit
+BigWigs:GetGUIDByName(name, depth, ignoredGUIDs) -- ignoredGUIDs must be a table
+
+BigWigs:OffsetGUID(input, offset) -- adds offset (signed integer) to GUID string
+
+BigWigs:RaidTargetLookup(input) -- For string input (eg "star", "Circle", "none") returns raid target index for use with SetRaidTarget(unit, index). For integer input (eg 1, 8, nil) returns raid target name to translate the output of GetRaidTargetIndex(unit).

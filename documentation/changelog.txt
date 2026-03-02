@@ -1,0 +1,82 @@
+--------------------------------------
+Changelog for BigWigs - Golden Edition
+--------------------------------------
+
+February Update - 2026-03-01 (Golden 30135)
+---------------
+(MC) Thaurissan - correct positioning is now recognized, added warning about upcoming floor zones recasts
+(AQ40) C'Thun - new bars to monitor Stomach Tentacle HP
+(K40) Sanv - Curse and Rift Feedback handling (major contributions by DCV-2142), better HP checks
+(K40) Mephistroth - added Shackles CD & Fear CD (major contributions by DCV-2142), better Doom bar
+(K40) Rupturan - added Throw Boulder mechanic, added P1 boss kill Window of Opportunity, added warning when Felheart reaches >80% mana, added Felheart mana bar; also added Ignite Earth timers (with contributions by DCV-2142).
+(K40) Incantagos - click Affinity bars to target, better HP checks; also add summon CD (with contributions by DCV-2142).
+(K40) Chess - fixed triggers for King's Fury, Shadow Bolt Volley, etc.
+(K40)/(ZG)/(DM)/(Common Auras) - update to use new ClickBar style
+
+(Bars) added ClickBar and MonitorBar, added emphasis toggle to StartBar (all HP bars will now stay grouped up and never get emphasized)
+(Core) added several helper functions: BigWigs:GetUnitIdByName(name, depth), BigWigs:GetTargetByName(name, depth), BigWigs:GetGUIDByName(name, depth, ignoredGUIDs), BigWigs:OffsetGUID(input, offset), BigWigs:RaidTargetLookup(input)
+(Core) SetRaidTargetForPlayer(player, mark) now also takes string-type mark names instead of only indices
+(documentation) added updated API documentation, added changelog (this file)
+
+(K40)/(Naxx) - warning about low spellEffectLevel (by pepopo978)
+(ZG) Mandokir - hackfix for rare concat error (by pepopo978)
+(Spell Requests) - added Power Word: Shield (by pepopo978)
+
+
+Hotfix - 2026-02-10
+------
+(K40) Rupturan - fixed Ignite Rock sync
+
+
+January Update - 2026-01-21 (Golden 30134)
+--------------
+(MC) Twin Golems - fix death sync trigger
+(ZG) Hakkar - improved OnClick for MC bar
+(AQ20) Rajaxx - fixed death sync, improved Andorov handling
+(DM) Eye of Kilrogg - module added
+(K40) all modules are now in a separate menu from K10
+(Bars) announcing bars to /raid requires a Shift-click
+
+(K40) Gnarlmoon - improved ravens bar (by pepopo978)
+(K40) Chess - rook shield bash added (by pepopo978)
+(Mage Tools) - update (by pepopo978)
+
+
+Forking Update - December 2025 (Golden 30132)
+--------------
+(K40) Mephistroth - Waking Nightmare added
+(K40) various small fixes to Incantagos, Echo
+(MC) Ragnaros - major rework
+(Version Check) added support for independent forks
+(TOC) spun off Golden Edition as an independent fork
+
+
+K40 Round 2 - November 2025
+-----------
+(K40) various small fixes
+(K40) Incantagos - added Surge of Mana bars
+(K40) Rupturan - added features
+(K40) Mephistroth - added features
+
+
+Small Fixes - November 2025
+-----------
+(ZG) Venoxis - removed unused Venom Spit message
+(DM) Kromcrush - various fixes and clarifications
+(AQ40) C'Thun - fix map not retaining vertical position
+
+
+MC Update - September 2025
+---------
+(MC) Gehennas - removed
+(MC) Twin Golems - module added
+(MC) Thaurissan - module added
+(MC) Ragnaros - preliminary 1.18 changes
+
+
+K40 Round 1 - August 2025
+-----------
+(Core) Added BigWigs:BuffNameByIndex(buffIndex)
+(K40) Substantial changes to most K40 modules: KeeperGnarlmoon, Incantagos, Anomalus, EchoOfMedivh, ChessFight, SanvTasdal, KaraTrash
+(Libs) Updated Babble-Zone and Babble-Boss with TWoW custom names
+(MC) 1.18 updates for Ragnaros

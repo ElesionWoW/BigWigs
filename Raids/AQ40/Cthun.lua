@@ -285,6 +285,7 @@ function module:OnEnable()
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE", "Event") --trigger_groundTremor
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE", "Event") --trigger_groundTremor
 
+	self:RegisterEvent("PLAYER_TARGET_CHANGED")
 
 	self:ThrottleSync(1, syncName.eyeBeam)
 
@@ -392,6 +393,17 @@ function module:MINIMAP_ZONE_CHANGED(msg)
 		self:ResetModule()
 		DEFAULT_CHAT_FRAME:AddMessage("|cff7fff7f   [BigWigs]|r - Auto-Rebooting Module: " .. module.translatedName)
 	end
+end
+
+function module:PLAYER_TARGET_CHANGED()
+    if self.db.profile.map and UnitName("target") == "Eye of C'Thun" and not UnitAffectingCombat("player") then
+        if not cthunmap then
+            self:SetupMap()
+        end
+        if cthunmap then
+            cthunmap:Show()
+        end
+    end
 end
 
 function module:ResetModule()

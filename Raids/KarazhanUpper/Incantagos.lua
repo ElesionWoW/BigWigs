@@ -472,7 +472,7 @@ function module:SummonSeeker()
 	self:RemoveBar(L["bar_summonSeekerCD"])
 	if self.db.profile.summonseeker then
 		self:Message(L["msg_summonSeeker"], "Attention")
-		local delay = 5
+		local delay = timer.summonSeekerCast
 		local nextMin = timer.summonSeekerCD[1] - delay
 		local nextMax = timer.summonSeekerCD[2] - delay
 		self:DelayedIntervalBar(delay, L["bar_summonSeekerCD"], nextMin, nextMax, icon.summonSeekerCD, true, "White")
@@ -484,7 +484,7 @@ function module:SummonWhelps()
 	self:RemoveBar(L["bar_summonWhelpsCD"])
 	if self.db.profile.summonwhelps then
 		self:Message(L["msg_summonWhelps"], "Attention")
-		local delay = 5
+		local delay = timer.summonWhelpsCast
 		local nextMin = timer.summonWhelpsCD[1] - delay
 		local nextMax = timer.summonWhelpsCD[2] - delay
 		self:DelayedIntervalBar(delay, L["bar_summonWhelpsCD"], nextMin, nextMax, icon.summonWhelpsCD, true, "White")

@@ -3,7 +3,7 @@ local module, L = BigWigs:ModuleDeclaration("King", "Karazhan")
 -- module variables
 module.revision = 30004
 module.enabletrigger = module.translatedName
-module.toggleoptions = { "kingsfury", "kingscursecd", "voidzone", -1, "subservienceyou", "subservienceothers", "subserviencecast", "marksubservience", "decursebow", "throttlebow", "charmingpresence", "markmindcontrol", "queensfury", -1, "shieldbashbar", "knightsglory", "bishoptonguesalert", "bishopvolley", "empoweredsb", -1, "printchess", "bosskill" }
+module.toggleoptions = { "lowhealth", "kingsfury", "kingscursecd", "voidzone", -1, "subservienceyou", "subservienceothers", "subserviencecast", "marksubservience", "decursebow", "throttlebow", "charmingpresence", "announcemindcontrol", "monitormindcontrol", "markmindcontrol", "queensfury", -1, "shieldbashbar", "knightsglory", "bishoptonguesalert", "bishopvolley", "empoweredsb", -1, "printchess", "bosskill" }
 module.zonename = {
 	AceLibrary("AceLocale-2.2"):new("BigWigs")["Tower of Karazhan"],
 	AceLibrary("Babble-Zone-2.2")["Tower of Karazhan"],
@@ -11,9 +11,11 @@ module.zonename = {
 module.wipemobs = { "Knight", "Bishop", "Rook" }
 
 local _, playerClass = UnitClass("player")
+local lowHealthThreshold = 8
 
 -- module defaults
 module.defaultDB = {
+	lowhealth = true,
 	kingsfury = true,
 	kingscursecd = true,
 	voidzone = true,
@@ -24,11 +26,13 @@ module.defaultDB = {
 	decursebow = playerClass == "MAGE" or playerClass == "DRUID",
 	throttlebow = true,
 	charmingpresence = playerClass == "SHAMAN",
+	announcemindcontrol = true,
+	monitormindcontrol = true,
 	markmindcontrol = true,
 	queensfury = false,
 	shieldbashbar = false,
 	knightsglory = false,
-	bishoptonguesalert = true,
+	bishoptonguesalert = IsRaidLeader() or playerClass == "WARLOCK",
 	bishopvolley = true,
 	empoweredsb = false,
 	printchess = false,
@@ -38,6 +42,10 @@ module.defaultDB = {
 L:RegisterTranslations("enUS", function()
 	return {
 		cmd = "ChessEvent",
+
+		lowhealth_cmd = "lowhealth",
+		lowhealth_name = "Piece Low HP Warning",
+		lowhealth_desc = "Warns when Rook/Bishop/Knight fall to "..lowHealthThreshold.."% HP to predict incoming King's Fury",
 
 		kingsfury_cmd = "kingsfury",
 		kingsfury_name = "King's Fury Alert",
@@ -79,9 +87,17 @@ L:RegisterTranslations("enUS", function()
 		charmingpresence_name = "Charming Presence Timer",
 		charmingpresence_desc = "Shows a timer for when the Queen will cast Charming Presence",
 
+		announcemindcontrol_cmd = "announcemindcontrol",
+		announcemindcontrol_name = "Announce Charmed Targets",
+		announcemindcontrol_desc = "Warns when a player gets mind controlled by the Queen (Charming Presence)",
+
+		monitormindcontrol_cmd = "monitormindcontrol",
+		monitormindcontrol_name = "Monitor Charmed Targets",
+		monitormindcontrol_desc = "Shows a health bar for all players affected by Charming Presence",
+
 		markmindcontrol_cmd = "markmindcontrol",
-		markmindcontrol_name = "Mark Mind Controlled Target",
-		markmindcontrol_desc = "Marks players affected by King's Curse with X raid icon (requires assistant or leader)",
+		markmindcontrol_name = "Mark Charmed Target",
+		markmindcontrol_desc = "Marks players affected by Charming Presence with X raid icon (requires assistant or leader)",
 
 		queensfury_cmd = "queensfury",
 		queensfury_name = "Queen's Fury Magnitude",
@@ -117,16 +133,17 @@ L:RegisterTranslations("enUS", function()
 
 		trigger_subservienceYou = "You are afflicted by Dark Subservience",
 		trigger_subservienceOther = "(.+) is afflicted by Dark Subservience",
-		trigger_subservienceFade = "Dark Subservience fades from (.+)",
+		trigger_subservienceFade = "Dark Subservience fades from (.+)%.",
 		trigger_subservienceFailed = "Dark Subservience fails. Grounding Totem", --not observed in logs since April 2025
 
 		trigger_kingscurseYou = "You are afflicted by King's Curse", --unused
 		trigger_kingscurseOther = "(.+) is afflicted by King's Curse",
-		trigger_kingscurseFade = "King's Curse fades from (.+)",
+		trigger_kingscurseFade = "King's Curse fades from (.+)%.",
 
 		trigger_charmingPresenceYou = "You are afflicted by Charming Presence",
 		trigger_charmingPresenceOther = "(.+) is afflicted by Charming Presence",
-		trigger_charmingPresenceFade = "Charming Presence fades from (.+)",
+		trigger_charmingPresenceEnemy = "(.+) %(Queen%) is afflicted by Charming Presence",
+		trigger_charmingPresenceFade = "Charming Presence fades from (.+)%.",
 		
 		trigger_queensfury = "Queen gains (.+) Fury %((%d+)%)%.",
 
@@ -144,20 +161,22 @@ L:RegisterTranslations("enUS", function()
 		msg_kingFurySafe = "Safe!",
 		msg_voidzone = "Void Zone MOVE!",
 
-		msg_subservienceYou = "YOU need to go Bow to the Queen!",
+		msg_subservienceYou = "YOU need Bow to the Queen!",
 		msg_subservienceOther = "%s needs to go Bow!",
 		msg_queenCastingSubservience = "Queen began casting on %s!",
-		msg_queenCastingSubservienceYou = "Dark Subservience incoming! Get ready to /bow (unless grounded).",
+		msg_queenCastingSubservienceYou = "Dark Subservience incoming! Get ready to /bow.",
 		msg_queenSubservienceTotem = "Totem ate cast instead of %s!",
 		msg_queenSubservienceTotemYou = "Safe from /bow! Totem ate cast.",
+		msg_charmingPresence = "Mind Control on %s",
 		msg_queensfury = "Queen's Fury %s ticking for ",
 
 		warning_bow = "BOW TO THE QUEEN!",
 		warn_kingsfury = "HIDE",
 
-		bar_subservience = "Go right in front of Queen and Bow! >Click Me<",
+		bar_subservience = ">Bow to Queen<",
 		bar_kingsfury = "King's Fury - Hide!",
 		bar_charmingpresence = "Next Charming Presence",
+		bar_mc = "MC on %s",
 		bar_decursebow = (playerClass=="MAGE" and ">Decurse %s!< for /bow") or (playerClass=="DRUID" and ">Decurse %s!< for bow") or "Decurse %s for /bow",
 		spell_decursebow = (playerClass=="MAGE" and "Remove Lesser Curse") or (playerClass=="DRUID" and "Remove Curse") or false,
 		bar_curseCD = "King's Curse on CD",
@@ -176,6 +195,8 @@ L:RegisterTranslations("enUS", function()
 		trigger_subservienceHit = "(.+) suffers (.+) Shadow damage from Queen's Dark Subservience",
 		
 		bar_shieldbash = "Shield Bash CD",
+		
+		msg_lowHealth = "Hide Phase Soon! - %s at "..lowHealthThreshold.."%%",
 	}
 end)
 
@@ -209,7 +230,8 @@ local syncName = {
 	queenCastingSubservience = "ChessQueenCastingSubservience" .. module.revision,
 	kingCastFury = "ChessKingCastFury" .. module.revision,
 	subservienceFailed = "ChessSubservienceFailed" .. module.revision,
-	charmingPresence = "ChessCharmingPresence" .. module.revision,
+	charmingPresenceCast = "ChessCharmingPresence" .. module.revision,
+	charmingPresence = "ChessQueenMC" .. module.revision,
 	queensfury = "ChessQueensFury" .. module.revision,
 	bishopNoCurse = "ChessBishopNoCurse" .. module.revision,
 	voidzone = "ChessVoidZone" .. module.revision,
@@ -230,12 +252,21 @@ local spellIds = {
 	kingscurse = 41635,
 	blunder = 52667, -- Void Zone
 	shieldbash = 51219, -- Shield Bash
+	tongues = 11719, -- Curse of Tongues rank 2
+}
+
+local guid = {
+	king = "0xF13000EA3F276C05",
+	bishop = "0xF13000EA43276C06",
+	rook = "0xF13000EA42276C07",
+	knight = "0xF13000EA40276C08",
 }
 
 local bowed = {}
 local bishopHasTongues = 0
 local bishopHasGlory = 0
 local kingHasGlory = 0
+local scanTargets = {}
 
 local baseChatFrameOnEvent = ChatFrame_OnEvent
 
@@ -243,8 +274,9 @@ function module:OnEnable()
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", "AfflictionEvent")
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE", "AfflictionEvent")
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE", "AfflictionEvent")
+	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_HOSTILEPLAYER_DAMAGE", "AfflictionEvent")
 
-	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_SELF")
+	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_SELF", "FadesEvent")
 	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_PARTY", "FadesEvent")
 	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_OTHER", "FadesEvent")
 
@@ -255,10 +287,6 @@ function module:OnEnable()
 
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_CREATURE_BUFFS", "EnemyDebuffEvent")
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE", "EnemyDebuffEvent")
-
-	if self.db.profile.bishoptonguesalert then
-		self:ScheduleRepeatingEvent("BishopDebuffScan", self.ScanBishopDebuffs, timer.bishopScan, self)
-	end
 
 	-- install wrapper exactly once
 	if not self.origChatFrameOnEvent and self.db.profile.throttlebow then
@@ -298,6 +326,7 @@ function module:OnEnable()
 	self:ThrottleSync(2, syncName.queenCastingSubservience)
 	self:ThrottleSync(2, syncName.kingCastFury)
 	self:ThrottleSync(2, syncName.subservienceFailed)
+	self:ThrottleSync(2, syncName.charmingPresenceCast)
 	self:ThrottleSync(2, syncName.charmingPresence)
 	self:ThrottleSync(5, syncName.queensfury)
 	self:ThrottleSync(2, syncName.bishopNoCurse)
@@ -333,11 +362,21 @@ function module:OnEngage()
 
 	self.queenTarget = ""
 
+	if self.db.profile.bishoptonguesalert then
+		self:ScheduleRepeatingEvent("BishopDebuffScan", self.ScanBishopDebuffs, timer.bishopScan, self)
+	end
+
+	if self.db.profile.lowhealth then
+		scanTargets = { guid.rook, guid.bishop, guid.knight }
+		self:ScheduleRepeatingEvent("ChessHealthCheck", self.CheckHealth, 0.25, self)
+	end
+
 	self:ShieldBash()
 end
 
 function module:OnDisengage()
 	self:CancelScheduledEvent("BishopDebuffScan")
+	self:CancelScheduledEvent("ChessHealthCheck")
 end
 
 function module:QueenCastEvent(casterGuid, targetGuid, eventType, spellId, castTime)
@@ -345,7 +384,7 @@ function module:QueenCastEvent(casterGuid, targetGuid, eventType, spellId, castT
 		self.queenTarget = UnitName(targetGuid) or ""
 		self:Sync(syncName.queenCastingSubservience .. " " .. self.queenTarget)
 	elseif spellId == spellIds.charmingpresence and eventType == "CAST" then
-		self:Sync(syncName.charmingPresence)
+		self:Sync(syncName.charmingPresenceCast)
 	end
 end
 
@@ -407,32 +446,19 @@ function module:AfflictionEvent(msg)
 	end
 
 	-- Charming Presence
-	local _, _, player = string.find(msg, L["trigger_charmingPresenceOther"])
-	if player and self.db.profile.markmindcontrol then
-		-- Mark the player with X raid target
-		self:SetRaidTargetForPlayer(player, 7) -- X
-		return
+	if string.find(msg, L["trigger_charmingPresenceYou"]) then
+		self:Sync(syncName.charmingPresence .. " " .. UnitName("player"))
+	else
+		local _, _, player = string.find(msg, L["trigger_charmingPresenceEnemy"])
+		if player then
+			self:Sync(syncName.charmingPresence .. " " .. player)
+		end
 	end
 	
 	-- King's Curse on anyone (just for timing the CD)
 	if string.find(msg, L["trigger_kingscurseOther"]) then
 		self:Sync(syncName.curseHappened)
 		return
-	end
-end
-
-function module:CHAT_MSG_SPELL_AURA_GONE_SELF(msg)
-	if string.find(msg, L["trigger_subservienceFade"]) then
-		self:RemoveBar(L["bar_subservience"])
-		self:RemoveWarningSign(icon.subservience, true)
-		self:Sound("Long")
-
-		if self.db.profile.marksubservience then
-			self:RestorePreviousRaidTargetForPlayer(UnitName("player"))
-		end
-	elseif string.find(msg, L["trigger_kingscurseFade"]) then
-		local player = UnitName("player")
-		self:RemoveBar(string.format(L["bar_decursebow"], player))
 	end
 end
 
@@ -470,12 +496,19 @@ end
 function module:FadesEvent(msg)
 	local _, _, player = string.find(msg, L["trigger_kingscurseFade"])
 	if player then
+		player = player == "you" and UnitName("player") or player
 		self:RemoveBar(string.format(L["bar_decursebow"], player))
 		return
 	end
 
 	_, _, player = string.find(msg, L["trigger_subservienceFade"])
 	if player then
+		if player == "you" then
+			self:RemoveBar(L["bar_subservience"])
+			self:RemoveWarningSign(icon.subservience, true)
+			self:Sound("Long")
+			player = UnitName("player")
+		end
 		if self.db.profile.marksubservience then
 			self:RestorePreviousRaidTargetForPlayer(player)
 		end
@@ -485,9 +518,8 @@ function module:FadesEvent(msg)
 
 	_, _, player = string.find(msg, L["trigger_charmingPresenceFade"])
 	if player then
-		if self.db.profile.markmindcontrol then
-			self:RestorePreviousRaidTargetForPlayer(player)
-		end
+		player = player == "you" and UnitName("player") or player
+		self:CharmingPresenceOver(player)
 		return
 	end
 	
@@ -512,10 +544,11 @@ function module:OnFriendlyDeath(msg)
 	local _, _, player = string.find(msg, "(.+) dies")
 	if player then
 		-- Remove raid marks for players who die
-		if self.db.profile.marksubservience or self.db.profile.markmindcontrol then
+		if self.db.profile.marksubservience then
 			self:RestorePreviousRaidTargetForPlayer(player)
 		end
 
+		self:CharmingPresenceOver(player)
 		self:RemoveBar(string.format(L["bar_decursebow"], player))
 	end
 end
@@ -529,13 +562,13 @@ function module:BigWigs_RecvSync(sync, rest, nick)
 		self:KingCastFury()
 	elseif sync == syncName.subservienceFailed and rest then
 		self:SubservienceFailed(rest)
-	elseif sync == syncName.charmingPresence then
-		if self.db.profile.charmingpresence then
-			self:StartCharmingPresenceTimer()
-		end
+	elseif sync == syncName.charmingPresenceCast then
+		self:StartCharmingPresenceTimer()
+	elseif sync == syncName.charmingPresence and rest then
+		self:CharmingPresence(rest)
 	elseif sync == syncName.queensfury and rest then
 		if self.db.profile.queensfury then
-			self:Message(string.format(L["msg_queensfury"], rest)..(tonumber(rest)*70), "Purple")
+			self:Message(string.format(L["msg_queensfury"], rest)..(tonumber(rest)*70), "Magenta", true, false)
 		end
 	elseif sync == syncName.bishopNoCurse then
 		self:BishopNeedsCurseOfTongues()
@@ -549,7 +582,7 @@ function module:BigWigs_RecvSync(sync, rest, nick)
 	elseif sync == syncName.kingGloryFade then
 		kingHasGlory = 0
 		if self.db.profile.knightsglory then
-			self:Message(string.format(L["msg_gloryFade"], module.translatedName), "Positive", nil, "Alert")
+			self:Message(string.format(L["msg_gloryFade"], module.translatedName), "Positive", true, "Alert")
 		end
 	elseif sync == syncName.bishopGloryGain then
 		bishopHasGlory = 1
@@ -559,7 +592,7 @@ function module:BigWigs_RecvSync(sync, rest, nick)
 	elseif sync == syncName.bishopGloryFade then
 		bishopHasGlory = 0
 		if self.db.profile.knightsglory then
-			self:Message(string.format(L["msg_gloryFade"], L["bishop_name"]), "Positive", nil, "Alert")
+			self:Message(string.format(L["msg_gloryFade"], L["bishop_name"]), "Positive", true, "Alert")
 		end
 	elseif sync == syncName.bishopTonguesGain then
 		bishopHasTongues = 1
@@ -585,7 +618,7 @@ end
 function module:QueenCastingSubservience(playerName)
 	self.queenTarget = playerName
 	if playerName == UnitName("player") and self.db.profile.subservienceyou then
-		self:Message(L["msg_queenCastingSubservienceYou"], "Urgent", nil, "Beware")
+		self:Message(L["msg_queenCastingSubservienceYou"], "Urgent", true, "Beware")
 	elseif self.db.profile.subserviencecast then
 		self:Message(string.format(L["msg_queenCastingSubservience"], playerName), "Attention", nil, "Info")
 	end	
@@ -593,15 +626,15 @@ end
 
 function module:SubservienceFailed(playerName) --might be defunct
 	if playerName == UnitName("player") and self.db.profile.subservienceyou then
-		self:Message(L["msg_queenSubservienceTotemYou"], "Positive", nil, "Long")
+		self:Message(L["msg_queenSubservienceTotemYou"], "Positive", true, "Long")
 	elseif self.db.profile.subserviencecast then
-		self:Message(string.format(L["msg_queenSubservienceTotem"], playerName), "Positive")
+		self:Message(string.format(L["msg_queenSubservienceTotem"], playerName), "Positive", true, false)
 	end	
 end
 
 function module:Subservience(player)
 	if player == UnitName("player") and self.db.profile.subservienceyou then
-		self:Message(L["msg_subservienceYou"], "Important")
+		self:Message(L["msg_subservienceYou"], "Important", true)
 		self:WarningSign(icon.subservience, timer.subservience, true, L["warning_bow"])
 		self:Bar(L["bar_subservience"], timer.subservience, icon.subservience)
 
@@ -667,12 +700,12 @@ function module:KingCastFury()
 	if kingHasGlory == 1 then
 		self:Message(L["msg_kingCastFuryFast"], "Attention", nil, "Beware")
 	else
-		self:Message(L["msg_kingCastFury"], "Attention", nil, "Info")
+		self:Message(L["msg_kingCastFury"], "Attention", nil, "Hide")
 	end
 	local castTime = timer.kingsfury / (1 + (0.5 * kingHasGlory))
 	self:Bar(L["bar_kingsfury"], castTime, icon.kingsfury)
 	self:WarningSign(icon.kingsfury, castTime, true, L["warn_kingsfury"])
-	self:DelayedMessage(castTime+0.2, L["msg_kingFurySafe"], "Positive", false, "Long", false)
+	self:DelayedMessage(castTime+0.2, L["msg_kingFurySafe"], "Positive", nil, "Long")
 end
 
 function module:VoidZoneAlert(player)
@@ -681,49 +714,29 @@ function module:VoidZoneAlert(player)
 	end
 
 	if player == UnitName("player") then
-		self:Message(L["msg_voidzone"], "Important", nil, "Alarm")
+		self:Message(L["msg_voidzone"], "Important", true, "VoidZoneMove")
 		self:WarningSign(icon.voidzone, timer.voidzone, true, L["msg_voidzone"])
-		self:Sound("VoidZoneMove")
 		SendChatMessage("Void Zone On Me!", "SAY")
 	end
 end
 
 function module:ScanBishopDebuffs()
-	-- Check if current target is Bishop
-	if UnitName("target") == L["bishop_name"] then
-		-- Scan debuffs
-		for i = 1, 16 do
-			local texture = UnitDebuff("target", i)
-			if texture and string.find(texture, "Spell_Shadow_CurseOfTounges") then
-				-- Found Curse of Tongues debuff
-				return
-			elseif not texture then
-				break
-			end
+	if UnitExists(guid.bishop) then
+		if UnitIsDead(guid.bishop) then
+			self:CancelScheduledEvent("BishopDebuffScan")
+			return
 		end
-
-		-- Scan buffs
-		for i = 1, 32 do
-			local texture = UnitBuff("target", i)
-			if texture and string.find(texture, "Spell_Shadow_CurseOfTounges") then
-				-- Found Curse of Tongues as buff
-				return
-			elseif not texture then
-				break
-			end
+		if not BigWigs:AuraIsPresent(guid.bishop, spellIds.tongues) then
+			-- no curse of tongues found, trigger sync
+			self:Sync(syncName.bishopNoCurse)
 		end
-
-		-- no curse of tongues found, trigger sync
-		self:Sync(syncName.bishopNoCurse)
 	end
 end
 
 function module:BishopNeedsCurseOfTongues()
+	bishopHasTongues = 0
 	if self.db.profile.bishoptonguesalert then
-		if IsRaidLeader() or playerClass == "WARLOCK" then
-			-- Alert warlocks that the Bishop needs to be cursed
-			self:Message(L["bishop_needsTongues"], "Important", nil, "Alert")
-		end
+		self:Message(L["bishop_needsTongues"], "Important", nil, "Alert")
 	end
 end
 
@@ -731,7 +744,7 @@ function module:ShadowBoltVolley()
 	if self.db.profile.bishopvolley then
 		local castTime = timer.sbvolley * (1 + bishopHasTongues * 0.6) / (1 + bishopHasGlory * 0.5)
 		self:Bar(L["bar_bishopVolley"], castTime, icon.sbvolley)
-		self:Message(L["msg_bishopVolley"], "purple", nil, "Alarm")
+		self:Message(L["msg_bishopVolley"], "Purple", nil, "Alarm")
 	end
 end
 
@@ -749,6 +762,45 @@ function module:ShieldBash()
 	end
 end
 
+function module:CharmingPresence(player)
+	if self.db.profile.announcemindcontrol then
+		self:Message(string.format(L["msg_charmingPresence"], player), "Core", nil, "Info")
+	end
+
+	if self.db.profile.monitormindcontrol then
+		self:MonitorBar(player.." MC", icon.charmingpresence, BigWigs:GetGUIDByName(player, 0), "health", string.format(L["bar_mc"], player))
+	end
+
+	-- Mark the player with X raid target
+	if self.db.profile.markmindcontrol then
+		self:SetRaidTargetForPlayer(player, 7) -- X
+	end
+end
+
+function module:CharmingPresenceOver(player)
+	self:RemoveBar(player.." MC")
+
+	if self.db.profile.markmindcontrol then
+		self:RestorePreviousRaidTargetForPlayer(player)
+	end
+end
+
+function module:CheckHealth()
+	local count = table.getn(scanTargets)
+	if (not self.db.profile.lowhealth) or count == 0 then
+		self:CancelScheduledEvent("ChessHealthCheck")
+		return
+	end
+	for i=1,count do
+		local percent = BigWigs:GetHealthPercent(scanTargets[i])
+		if percent and percent < lowHealthThreshold then
+			self:Message(string.format(L["msg_lowHealth"], UnitName(scanTargets[i])), "Attention")	
+			table.remove(scanTargets, i)
+			break
+		end
+	end
+end
+
 function module:Test()
 	-- Initialize module state
 	self:OnSetup()
@@ -763,14 +815,14 @@ function module:Test()
 		-- King's Curse events
 		{ time = 1, func = function()
 			-- Simulate actual message format
-			local msg = originalPlayer .. " is afflicted by King's Curse"
+			local msg = originalPlayer .. " is afflicted by King's Curse."
 			module:AfflictionEvent(msg)
 			print("Test: " .. msg)
 		end },
 
 		{ time = 1, func = function()
 			-- Simulate actual message format
-			local msg = testPlayerName1 .. " is afflicted by King's Curse"
+			local msg = testPlayerName1 .. " is afflicted by King's Curse."
 			module:AfflictionEvent(msg)
 			print("Test: " .. msg)
 		end },
@@ -785,31 +837,31 @@ function module:Test()
 
 		-- Subservience events for self
 		{ time = 3, func = function()
-			local msg = "You are afflicted by Dark Subservience"
+			local msg = "You are afflicted by Dark Subservience."
 			module:AfflictionEvent(msg)
 			print("Test: " .. msg)
 		end },
 
 		{ time = 5, func = function()
 			print("Test: Scanning Bishop")
-			local originalName = L["bishop_name"]
-			L["bishop_name"] = UnitName("target")
+			local originalGuid = guid.bishop
+			_, guid.bishop = UnitExists("target")
 
 			-- Run the scan function
 			module:ScanBishopDebuffs()
 
-			-- Restore original name
-			L["bishop_name"] = originalName
+			-- Restore original GUID
+			guid.bishop = originalGuid
 		end },
 
 		{ time = 7, func = function()
 			print("Test: Queen begins to cast Charming Presence")
-			module:Sync(syncName.charmingPresence)
+			module:Sync(syncName.charmingPresenceCast)
 		end },
 
 		{ time = 9, func = function()
-			local msg = "Dark Subservience fades from you"
-			module:CHAT_MSG_SPELL_AURA_GONE_SELF(msg)
+			local msg = "Dark Subservience fades from you."
+			module:FadesEvent(msg)
 			print("Test: " .. msg)
 		end },
 
@@ -827,22 +879,34 @@ function module:Test()
 			print("Test: " .. msg)
 		end },
 
+		{ time = 13, func = function()
+			local msg = "You are afflicted by Charming Presence."
+			self:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
+			print("Test: " .. msg)
+		end },
+
 		{ time = 18, func = function()
-			local msg = "Dark Subservience fades from " .. testPlayerName1
+			local msg = "Dark Subservience fades from " .. testPlayerName1.."."
 			module:FadesEvent(msg)
+			print("Test: " .. msg)
+		end },
+
+		{ time = 19, func = function()
+			local msg = "Charming Presence fades from you."
+			self:TriggerEvent("CHAT_MSG_SPELL_AURA_GONE_SELF", msg)
 			print("Test: " .. msg)
 		end },
 
 		-- Test King's Curse fading
 		{ time = 20, func = function()
-			local msg = "King's Curse fades from " .. testPlayerName1
+			local msg = "King's Curse fades from " .. testPlayerName1.."."
 			module:FadesEvent(msg)
 			print("Test: " .. msg)
 		end },
 
 		-- Test SBV from Bishop
 		{ time = 22, func = function()
-			local msg = "Bishop begins to cast Shadow Bolt Volley"
+			local msg = "Bishop begins to cast Shadow Bolt Volley."
 			module:SpellEvent(msg)
 			print("Test: " .. msg)
 		end },
@@ -874,23 +938,28 @@ function module:Test()
 			print("Test: " .. msg)
 		end },
 
+		{ time = 29, func = function()
+			local msg = testPlayerName2 .. " (Queen) is afflicted by Charming Presence."
+			self:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_HOSTILEPLAYER_DAMAGE", msg)
+			print("Test: " .. msg)
+		end },
+
 		-- Test player death with debuffs
 		{ time = 30, func = function()
-			local msg = testPlayerName2 .. " is afflicted by Dark Subservience"
+			local msg = testPlayerName2 .. " is afflicted by Dark Subservience."
 			module:AfflictionEvent(msg)
 			module:DecurseReminder(testPlayerName2)
 			print("Test: " .. msg)
 		end },
 
 		{ time = 31, func = function()
-			local msg = testPlayerName2 .. " is afflicted by King's Curse"
+			local msg = testPlayerName2 .. " is afflicted by King's Curse."
 			module:AfflictionEvent(msg)
 			print("Test: " .. msg)
 		end },
 
 		{ time = 32, func = function()
-			local msg = testPlayerName2 .. " dies"
-			-- Correct event for player death is CHAT_MSG_COMBAT_FRIENDLY_DEATH
+			local msg = testPlayerName2 .. " dies."
 			module:OnFriendlyDeath(msg)
 			print("Test: " .. msg)
 		end },
@@ -898,14 +967,14 @@ function module:Test()
 		-- Add to the events table inside the Test function
 		{ time = 33, func = function()
 			print("Test: Scanning Bishop")
-			local originalName = L["bishop_name"]
-			L["bishop_name"] = UnitName("target")
+			local originalGuid = guid.bishop
+			_, guid.bishop = UnitExists("target")
 
 			-- Run the scan function
 			module:ScanBishopDebuffs()
 
-			-- Restore original name
-			L["bishop_name"] = originalName
+			-- Restore original GUID
+			guid.bishop = originalGuid
 		end },
 
 		-- CoT on Bishop
@@ -931,20 +1000,20 @@ function module:Test()
 
 		-- King's Fury event
 		{ time = 36, func = function()
-			local msg = "King begins to cast King’s Fury"
+			local msg = "King begins to cast King’s Fury."
 			module:SpellEvent(msg)
 			print("Test: " .. msg)
 		end },
 
 		-- First Shield Bash
 		{ time = 37, func = function()
-			print("Test: Rook casts Shield Bash")
+			print("Test: Rook casts Shield Bash.")
 			module:ShieldBash()
 		end },
 
 		-- Test SBV from Bishop with full length
 		{ time = 38, func = function()
-			local msg = "Bishop begins to cast Shadow Bolt Volley"
+			local msg = "Bishop begins to cast Shadow Bolt Volley."
 			module:SpellEvent(msg)
 			print("Test: " .. msg)
 		end },

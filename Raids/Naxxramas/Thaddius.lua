@@ -4,7 +4,7 @@ local stalagg = AceLibrary("Babble-Boss-2.2")["Stalagg"]
 
 module.revision = 30091
 module.enabletrigger = { module.translatedName, feugen, stalagg }
-module.toggleoptions = { "power", "magneticPull", "manaburn", "tankthreat", -1, "phase", -1, "enrage", "selfcharge", "polarity", "bosskill" }
+module.toggleoptions = { "addbars", "power", "magneticPull", "manaburn", "tankthreat", -1, "phase", -1, "enrage", "selfcharge", "polarity", "bosskill" }
 
 module.defaultDB = {
 	enrage = false,
@@ -15,6 +15,10 @@ module.defaultDB = {
 L:RegisterTranslations("enUS", function()
 	return {
 		cmd = "Thaddius",
+
+		addbars_cmd = "addbars",
+		addbars_name = "Health Bars for Adds",
+		addbars_desc = "Show health bars for Stalagg and Feugen",
 
 		power_cmd = "power",
 		power_name = "Power Surge Alert",
@@ -51,6 +55,9 @@ L:RegisterTranslations("enUS", function()
 
 		trigger_engage = "Stalagg crush you!", --CHAT_MSG_MONSTER_YELL
 		trigger_engage1 = "Feed you to master!", --CHAT_MSG_MONSTER_YELL
+
+		bar_feugen = "Feugen (R)",
+		bar_stalagg = "Stalagg (L)",
 
 		trigger_powerSurge = "Stalagg gains Power Surge.", --CHAT_MSG_SPELL_PERIODIC_CREATURE_BUFFS
 		bar_powerSurge = "Power Surge",
@@ -118,6 +125,7 @@ local timer = {
 local icon = {
 	powerSurge = "Spell_Shadow_UnholyFrenzy",
 	magneticPull = "spell_nature_groundingtotem",
+	add = "INV_Misc_Head_Undead_01",
 
 	phase2 = "Inv_misc_pocketwatch_01",
 
@@ -163,6 +171,11 @@ local syncName = {
 
 	polarityShiftCast = "ThaddiusPolarityShiftCast" .. module.revision,
 	polarity = "ThaddiusPolarity" .. module.revision,
+}
+
+local guid = {
+	feugen = nil,
+	stalagg = nil,
 }
 
 local phase2started = nil
@@ -221,15 +234,10 @@ function module:OnEngage()
 
 	stalaggDead = false
 	feugenDead = false
-
-	self.feugenHP = 100
-	self.stalaggHP = 100
-	self:TriggerEvent("BigWigs_StartHPBar", self, feugen, 100, "Interface\\Icons\\" .. icon.hpBar, true, color.hpBar)
-	self:TriggerEvent("BigWigs_SetHPBar", self, feugen, 0)
-	self:TriggerEvent("BigWigs_StartHPBar", self, stalagg, 100, "Interface\\Icons\\" .. icon.hpBar, true, color.hpBar)
-	self:TriggerEvent("BigWigs_SetHPBar", self, stalagg, 0)
-
-	self:ScheduleRepeatingEvent("CheckAddHP", self.CheckAddHP, 0.5, self)
+	
+	guid.stalagg = nil
+	guid.feugen = nil
+	self:FindAdds()
 
 	if self.db.profile.magneticPull then
 		self:Bar(L["bar_magneticPull"], timer.magneticPull, icon.magneticPull, true, color.magneticPull)
@@ -349,9 +357,9 @@ end
 function module:CHAT_MSG_COMBAT_HOSTILE_DEATH(msg)
 	BigWigs:CheckForBossDeath(msg, self)
 
-	if (msg == string.format(UNITDIESOTHER, "Feugen")) then
+	if (msg == string.format(UNITDIESOTHER, feugen)) then
 		feugenDead = true
-	elseif (msg == string.format(UNITDIESOTHER, "Stalagg")) then
+	elseif (msg == string.format(UNITDIESOTHER, stalagg)) then
 		stalaggDead = true
 	end
 
@@ -379,32 +387,6 @@ end
 function module:CHAT_MSG_RAID_BOSS_EMOTE(msg)
 	if msg == L["trigger_3sec"] then
 		self:Sync(syncName.teslaOverload)
-	end
-end
-
-function module:CheckAddHP()
-	local feugenHealth
-	local stalaggHealth
-
-	for i = 1, GetNumRaidMembers() do
-		if UnitName("Raid" .. i .. "Target") == feugen then
-			feugenHealth = math.ceil((UnitHealth("Raid" .. i .. "Target") / UnitHealthMax("Raid" .. i .. "Target")) * 100)
-		elseif UnitName("Raid" .. i .. "Target") == stalagg then
-			stalaggHealth = math.ceil((UnitHealth("Raid" .. i .. "Target") / UnitHealthMax("Raid" .. i .. "Target")) * 100)
-		end
-		if feugenHealth and stalaggHealth then
-			break
-		end
-	end
-
-	if feugenHealth then
-		self.feugenHP = feugenHealth
-		self:TriggerEvent("BigWigs_SetHPBar", self, feugen, 100 - self.feugenHP)
-	end
-
-	if stalaggHealth then
-		self.stalaggHP = stalaggHealth
-		self:TriggerEvent("BigWigs_SetHPBar", self, stalagg, 100 - self.stalaggHP)
 	end
 end
 
@@ -491,15 +473,38 @@ function module:ManaBurn()
 	self:Sound("Beware")
 end
 
+function module:FindAdds()
+	if not guid.feugen then
+		local temp = BigWigs:GetGUIDByName(feugen, 1)
+		if temp then
+			guid.feugen = temp
+			if self.db.profile.addbars then
+				self:MonitorBar(L["bar_feugen"], icon.add, temp)
+			end
+		end
+	end
+	if not guid.stalagg then
+		local temp = BigWigs:GetGUIDByName(stalagg, 1)
+		if temp then
+			guid.stalagg = temp
+			if self.db.profile.addbars then
+				self:MonitorBar(L["bar_stalagg"], icon.add, temp)
+			end
+		end
+	end
+	if not (guid.stalagg and guid.feugen) then
+		self:ScheduleEvent("ThaddiusAddLocator", self.FindAdds, 0.2, self) 
+	end
+end
+
 function module:Phase2()
 	phase2started = true
 
-	self:TriggerEvent("BigWigs_StopHPBar", self, feugen)
-	self:TriggerEvent("BigWigs_StopHPBar", self, stalagg)
-	self:CancelScheduledEvent("CheckAddHP")
 	self:CancelScheduledEvent("MagneticPull")
 	self:RemoveBar(L["bar_magneticPull"])
 	self:RemoveBar(L["bar_powerSurge"])
+	self:RemoveBar(L["bar_feugen"])
+	self:RemoveBar(L["bar_stalagg"])
 	self:CancelDelayedSound("Info")
 
 	self:Bar(L["bar_phase2"], timer.phase2, icon.phase2, true, color.phase)

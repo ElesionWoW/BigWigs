@@ -393,11 +393,11 @@ function module:AfflictionEvent(msg)
 		return
 	end
 	if string.find(msg, L["trigger_arcanist_blizzard"]) then
-		self:Message(L["msg_arcanist_blizzard"], "Attention", nil, "Info")
+		self:Message(L["msg_arcanist_blizzard"], "Attention", true, "Info")
 		self:WarningSign(icon.arcanist_blizzard, 2, false, L["warn_arcanist_blizzard"])
 	end
 	if string.find(msg, L["trigger_astrologist_insight"]) then
-		self:Message(L["msg_astrologist_insight"], "Important", nil, "Beware")
+		self:Message(L["msg_astrologist_insight"], "Important", true, "Beware")
 		self:WarningSign(icon.astrologist_insight, 7, true, L["warn_astrologist_insight"])
 	end
 	if string.find(msg, L["trigger_astrologist_rain"]) then
@@ -409,7 +409,7 @@ function module:RemoveEvent(msg)
 	-- Check for Mana Buildup removal
 	if string.find(msg, L["trigger_remove_mana_buildup"]) then
 		self:RemoveBar(L["bar_mana_buildup"])
-		self:Message(L["msg_mana_buildup_remove"], "Green", nil)
+		self:Message(L["msg_mana_buildup_remove"], "Positive", true, "Long")
 	end
 end
 
@@ -449,13 +449,13 @@ function module:BigWigs_RecvSync(sync, rest, nick)
 	elseif sync == syncName.mana_buildup then
 		if self.db.profile.mana_buildup and rest == UnitName("player") then
 			self:Bar(L["bar_mana_buildup"], timer.mana_buildup, icon.mana_buildup)
-			self:Message(L["msg_mana_buildup_you"], "Urgent", nil, "Info")
+			self:Message(L["msg_mana_buildup_you"], "Urgent", true, "Info")
 		elseif self.db.profile.mana_buildup then
 			self:Message(string.format(L["msg_mana_buildup"], rest), "Attention", nil, "Info")
 		end
 	elseif sync == syncName.unstable_mana then
 		if self.db.profile.unstable_mana and rest == UnitName("player") then
-			self:Message(L["msg_unstable_mana_you"], "Urgent", nil, "Info")
+			self:Message(L["msg_unstable_mana_you"], "Urgent", true, "Info")
 			self:Bar(L["bar_unstable_mana"], timer.unstable_mana, icon.unstable_mana)
 		elseif self.db.profile.unstable_mana then
 			self:Message(string.format(L["msg_unstable_mana"], rest), "Attention", nil, "Info")
@@ -479,7 +479,7 @@ function module:BigWigs_RecvSync(sync, rest, nick)
 		end
 	elseif sync == syncName.astrologist_rain then
 		if self.db.profile.astrologist_rain then
-			self:Message(L["msg_astrologist_rain"], "Important")
+			self:Message(L["msg_astrologist_rain"], "Important", nil, false)
 			self:WarningSign(icon.astrologist_rain, 2, false, L["warn_astrologist_rain"])
 			if playerClass == "PRIEST" then
 				self:Sound("Beware")
@@ -510,7 +510,7 @@ end
 function module:EnvelopedFlames(player)
 	if self.db.profile.magus_flames then
 		if player == UnitName("player") then
-			self:Message(L["msg_magus_flames_self"], "Important", nil, "Beware")
+			self:Message(L["msg_magus_flames_self"], "Important", true, "Beware")
 			self:RemoveWarningSign(icon.astrologist_insight, true) --cancel other forced sign since this is more important
 			self:WarningSign(icon.magus_flames, 3, true, L["warn_magus_flames"])
 		elseif playerClass == "PALADIN" or playerClass == "PRIEST" then

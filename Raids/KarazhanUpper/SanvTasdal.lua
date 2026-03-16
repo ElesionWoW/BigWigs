@@ -192,7 +192,7 @@ end
 
 function module:CHAT_MSG_SPELL_PERIODIC_CREATURE_BUFFS(msg)
 	if string.find(msg, L["trigger_Enrage"]) then
-		self:Message(L["msg_Enrage"], "Important")
+		self:Message(L["msg_Enrage"], "Important", nil, false)
 		local _, playerClass = UnitClass("player")
 		if playerClass == "HUNTER" then
 			self:Sound("Alert")
@@ -222,7 +222,7 @@ function module:PhaseShifted(player)
 			-- Add personal expiration bar with yellow color
 			self:Bar(L["bar_phaseShiftedExpires"], timer.phaseShiftedDuration, icon.phaseShifted, true, "yellow")
 		else
-			self:Message(string.format(L["msg_phaseShiftedOther"], player), "Urgent")
+			self:Message(string.format(L["msg_phaseShiftedOther"], player), "Urgent", nil, false)
 		end
 	end
 end
@@ -244,7 +244,7 @@ function module:CheckBossHealth()
 		local percent = UnitHealth(guid.sanv)/UnitHealthMax(guid.sanv) * 100
 
 		if percent <= 80 and not self.hitEighty then
-			self:Message(L["msg_portalsOpen"], "Attention", nil, "Alarm")
+			self:Message(L["msg_portalsOpen"], "Attention")
 			self.hitEighty = true
 		end
 		if percent <= 40 and not self.hitForty then
@@ -256,7 +256,7 @@ function module:CheckBossHealth()
 end
 
 function module:AddPhase()
-	self:Message(L["msg_addPhase"], "Attention", nil, "Alarm")
+	self:Message(L["msg_addPhase"], "Attention")
 	self:RemoveBar(L["bar_curseRift"])
 	self:RemoveBar(L["bar_overflowingHatredCast"])
 	if self.db.profile.addphase then

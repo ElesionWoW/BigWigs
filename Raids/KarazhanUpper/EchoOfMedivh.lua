@@ -283,7 +283,7 @@ function module:FadesEvent(msg)
 		self:CorruptionFade(player)
 	end
 	if self.db.profile.irestacks and string.find(msg, L["trigger_ireFade"]) then
-		self:Message(string.format(L["msg_ire"], 0), "Positive")
+		self:Message(string.format(L["msg_ire"], 0), "Positive", true, "Long")
 		self:RemoveBar(L["bar_ire"])
 	end
 end
@@ -295,7 +295,7 @@ function module:CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE(msg)
 			self:Message(string.format(L["msg_cast"], spell), "Important", true, "Info")
 			self:WarningSign(icon.frostnova, 1, false, L["warn_cast"])
 		elseif self.db.profile.castshadowbolt and spell == L["spell_ShadowBolt"] then
-			self:Message(string.format(L["msg_cast"], spell), "Urgent", true, "Alarm")
+			self:Message(string.format(L["msg_cast"], spell), "Urgent", nil, "Alarm")
 			self:WarningSign(icon.shadowbolt, 1, true, L["warn_cast"])
 		elseif self.db.profile.castpyroblast and spell == L["spell_Pyroblast"] then
 			self:Message(string.format(L["msg_cast"], spell), "Important", true, "Info")
@@ -332,7 +332,7 @@ function module:CHAT_MSG_SPELL_PERIODIC_CREATURE_BUFFS(msg)
 			ire = tonumber(str)
 		end
 		if ire then
-			self:Message(string.format(L["msg_ire"], ire), "Attention")
+			self:Message(string.format(L["msg_ire"], ire), "Attention", true, false)
 			self:Bar(L["bar_ire"], timer.ireReset, icon.ire)
 		end
 	end
@@ -417,7 +417,7 @@ end
 
 function module:ArcaneFocus(player)
 	if self.db.profile.arcanefocus then
-		self:Message(string.format(L["msg_arcanefocus"], player), "Important")
+		self:Message(string.format(L["msg_arcanefocus"], player), "Important", true)
 		self:WarningSign(icon.focus, 2, false, string.format(L["warn_arcanefocus"], player))
 	end
 end
@@ -463,11 +463,11 @@ function module:CancelRestoPot()
 	if GetPlayerBuffID then
 		-- use spell id if superwow available to avoid potentially canceling the wrong buff
 		if BigWigs:CancelAuraId(11359) then
-			self:Message(L["resto_pot_cancelling"], "Positive")
+			self:Message(L["resto_pot_cancelling"], "Positive", true, false)
 		end
 	else
 		if BigWigs:CancelAuraTexture("Spell_Holy_DispelMagic") then
-			self:Message(L["resto_pot_cancelling"], "Positive")
+			self:Message(L["resto_pot_cancelling"], "Positive", true, false)
 		end
 	end
 end

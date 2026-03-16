@@ -271,11 +271,7 @@ function module:OnRegister()
 end
 
 function module:OnEnable()
-	--self:RegisterEvent("CHAT_MSG_SAY", "Event") --Debug
-
 	self:RegisterEvent("CHAT_MSG_MONSTER_EMOTE") --trigger_weakened
-
-	--self:RegisterEvent("UNIT_HEALTH") --stomach tentacles hp
 
 	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE", "Event") --trigger_cthun_eyeBeam, trigger_giantEye_eyeBeam
 
@@ -824,8 +820,9 @@ function module:CheckFleshTentacles()
 
 	local percent = UnitHealth(guidSecond) / UnitHealthMax(guidSecond) * 100
 	if percent <= 20 then
-		self:Message(string.format(L["msg_secondTentacleLow"],percent), "Urgent")
+		self:Message(string.format(L["msg_secondTentacleLow"],math.ceil(percent)), "Urgent")
 		secondTentacleLowWarn = true
+		self:CancelScheduledEvent("CthunCheckFleshTentacles")
 	end
 end
 
@@ -1013,22 +1010,4 @@ function module:SetupMap()
 	end
 end
 
--- Adds command that forces the C'Thun map to appear. Use to test map and save its settings outside of the raid
---[[
-SLASH_CTHUNMAPSHOW1 = "/cthunmapshow"
-SlashCmdList["CTHUNMAPSHOW"] = function()
-	local mod = BigWigs:GetModule("C'Thun", true)
-	if not mod then
-		DEFAULT_CHAT_FRAME:AddMessage("C'Thun module not loaded.")
-		return
-	end
-
-	if not cthunmap then
-		mod:SetupMap()
-	end
-
-	SetMapToCurrentZone()
-	cthunmap:Show()
-	DEFAULT_CHAT_FRAME:AddMessage("C'Thun map forced visible.")
-end
---]]
+-- to test the map in an empty instance: /run BigWigs:EnableModule("C'Thun", true) cthunmap:Show()

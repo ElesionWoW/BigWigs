@@ -371,7 +371,7 @@ function module:BuffEvent(msg)
 		self:Sync(syncName.crystalAffinity)
 	elseif string.find(msg, L["trigger_berserk"]) then
 		self:WarningSign(icon.berserk, 2, true, L["warn_berserk"])
-		self:Message(L["msg_berserk"], "Urgent", true, "Murloc")
+		self:Message(L["msg_berserk"], "Urgent", nil, "Murloc")
 	end
 end
 
@@ -409,7 +409,7 @@ function module:DebuffEvent(msg)
 	if player then
 		self:SurgeBar(player)
 		if self.db.profile.surgewarning then
-			self:Message(string.format(L["msg_surge"], player), "Attention", true, "Info")			
+			self:Message(string.format(L["msg_surge"], player), "Attention", nil, "Info")			
 		end
 	end
 end
@@ -491,7 +491,7 @@ end
 
 function module:LeyLine()
 	if self.db.profile.leyline then
-		self:Message(L["msg_leyLine"], "Important", true, "Beware")
+		self:Message(L["msg_leyLine"], "Important", nil, "Beware")
 		self:WarningSign(icon.leyLine, 3, false, L["warn_leyLine"])
 		self:RemoveBar(L["bar_leyLineCD"])
 		self:Bar(L["bar_leyLineCast"], timer.leyLineCast, icon.leyLine, true, color.leyLine)
@@ -501,7 +501,7 @@ end
 
 function module:BlackAffinity()
 	if self.db.profile.affinity then
-		self:Message(L["msg_blackAffinity"], "Important", true, "Alarm")
+		self:Message(L["msg_blackAffinity"], "Important", nil, "Alarm")
 		self:WarningSign(icon.blackAffinity, 5, true, L["warn_blackAffinity"])
 		self:ClickBar(L["bar_blackAffinity"], timer.affinity, icon.blackAffinity, L["unit_blackAffinity"])
 	end
@@ -512,7 +512,7 @@ end
 
 function module:BlueAffinity()
 	if self.db.profile.affinity then
-		self:Message(L["msg_blueAffinity"], "Important", true, "Alarm")
+		self:Message(L["msg_blueAffinity"], "Important", nil, "Alarm")
 		self:WarningSign(icon.blueAffinity, 5, true, L["warn_blueAffinity"])
 		self:ClickBar(L["bar_blueAffinity"], timer.affinity, icon.blueAffinity, L["unit_blueAffinity"])
 	end
@@ -523,7 +523,7 @@ end
 
 function module:CrystalAffinity()
 	if self.db.profile.affinity then
-		self:Message(L["msg_crystalAffinity"], "Important", true, "Alarm")
+		self:Message(L["msg_crystalAffinity"], "Important", nil, "Alarm")
 		self:WarningSign(icon.crystalAffinity, 5, true, L["warn_crystalAffinity"])
 		self:ClickBar(L["bar_crystalAffinity"], timer.affinity, icon.crystalAffinity, L["unit_crystalAffinity"])
 	end
@@ -534,7 +534,7 @@ end
 
 function module:GreenAffinity()
 	if self.db.profile.affinity then
-		self:Message(L["msg_greenAffinity"], "Important", true, "Alarm")
+		self:Message(L["msg_greenAffinity"], "Important", nil, "Alarm")
 		self:WarningSign(icon.greenAffinity, 5, true, L["warn_greenAffinity"])
 		self:ClickBar(L["bar_greenAffinity"], timer.affinity, icon.greenAffinity, L["unit_greenAffinity"])
 	end
@@ -545,7 +545,7 @@ end
 
 function module:ManaAffinity()
 	if self.db.profile.affinity then
-		self:Message(L["msg_manaAffinity"], "Important", true, "Alarm")
+		self:Message(L["msg_manaAffinity"], "Important", nil, "Alarm")
 		self:WarningSign(icon.manaAffinity, 5, true, L["warn_manaAffinity"])
 		self:ClickBar(L["bar_manaAffinity"], timer.affinity, icon.manaAffinity, L["unit_manaAffinity"])
 	end
@@ -556,7 +556,7 @@ end
 
 function module:RedAffinity()
 	if self.db.profile.affinity then
-		self:Message(L["msg_redAffinity"], "Important", true, "Alarm")
+		self:Message(L["msg_redAffinity"], "Important", nil, "Alarm")
 		self:WarningSign(icon.redAffinity, 5, true, L["warn_redAffinity"])
 		self:ClickBar(L["bar_redAffinity"], timer.affinity, icon.redAffinity, L["unit_redAffinity"])
 	end
@@ -582,7 +582,7 @@ end
 
 function module:AllSeekersDead()
 	self.seekersLeft = 0
-	self:Message(L["msg_seekerDeath"], "Positive")
+	self:Message(L["msg_seekerDeath"], "Positive", nil, "Long")
 	
 	if self.db.profile.leyline then
 		self:IntervalBar(L["bar_leyLineCD"], timer.firstLeyLine[1], timer.firstLeyLine[2], icon.leyLine, true, color.leyLine)

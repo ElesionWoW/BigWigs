@@ -335,8 +335,8 @@ function module:UnstableMagic(duration)
 	if bomb then -- always warn
 		self:RemoveWarningSign(icon.arcaneOverload, true) -- override bomb sign
 		self:WarningSign(icon.unstableMagic, 3, true, L["msg_unstableMagicBomb"])
-		self:Message(L["msg_unstableMagicBomb"], "Important")
-		self:Message(L["msg_unstableMagicBomb"], "Important")
+		self:Message(L["msg_unstableMagicBomb"], "Important", true, false)
+		self:Message(L["msg_unstableMagicBomb"], "Important", true, false)
 		self:Message(L["msg_unstableMagicBomb"], "Important", true, "RunAway")
 		self:Bar(L["bar_unstableMagic"], duration, icon.unstableMagic, true, "red")
 	elseif dampened and time - elapsed > duration + 0.1 and self.db.profile.unstablemagic then -- notify if enough time and enabled

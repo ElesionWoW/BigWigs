@@ -851,7 +851,7 @@ function BigWigsBars:BigWigs_StartIntervalBar(module, text, intervalMin, interva
 	end
 end
 
-local monitorBarCache = {-- [i] = {barName, GUID, type, barText, insertMark}
+local monitorBarCache = {-- [i] = {id, GUID, type, barText, insertMark}
 }
 function BigWigsBars:BigWigs_StartMonitorBar(module, barName, icon, guid, type, displayText, insertMark, emphazise, otherc, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
 	if (not barName) or (not guid) then
@@ -860,7 +860,7 @@ function BigWigsBars:BigWigs_StartMonitorBar(module, barName, icon, guid, type, 
 	
 	-- set up defaults
 	type = type or "health"
-	displayText = displayText or ""
+	displayText = displayText or barName
 	if emphazise == nil then
 		emphazise = false
 	end
@@ -877,10 +877,14 @@ function BigWigsBars:BigWigs_StartMonitorBar(module, barName, icon, guid, type, 
 		return string.format("%d%%", floor(t))
 	end)
 
+	-- set the bar's background color to a darker hue
+	local _, r, g, b = paint:GetRGBPercent(c1)
+	module:SetCandyBarBackgroundColorRGB(id, r*0.7, g*0.7, b*0.7, 0.5)
 
+	-- enter/update bar's cache entry
 	local barExists = false
 	for i = 1, table.getn(monitorBarCache) do
-		if monitorBarCache[i] and monitorBarCache[i][1] == barName then
+		if monitorBarCache[i] and monitorBarCache[i][1] == id then
 			barExists = true
 			monitorBarCache[i][2] = guid
 			monitorBarCache[i][3] = type
@@ -889,7 +893,7 @@ function BigWigsBars:BigWigs_StartMonitorBar(module, barName, icon, guid, type, 
 		end
 	end
 	if not barExists then
-		table.insert(monitorBarCache, { barName, guid, type, displayText, insertMark })
+		table.insert(monitorBarCache, { id, guid, type, displayText, insertMark })
 	end
 
 	BigWigsBars:UpdateAllMonitorBars()
@@ -901,8 +905,7 @@ function BigWigsBars:UpdateAllMonitorBars()
 	end
 
 	for i = 1,table.getn(monitorBarCache) do
-		local id = "BigWigsBar " .. monitorBarCache[i][1]
-		local bar = candybar.var.handlers[id]
+		local bar = candybar.var.handlers[monitorBarCache[i][1]]
 		if not bar then
 			table.remove(monitorBarCache, i)
 			self:UpdateAllMonitorBars()
@@ -915,21 +918,21 @@ function BigWigsBars:UpdateAllMonitorBars()
 		local currentPercent = 0
 		if monitorBarCache[i][3] == "health" and UnitExists(monitorBarCache[i][2]) then
 			currentValue = UnitHealth(monitorBarCache[i][2])
-			currentValueString = currentValue.." "..L["HP"]
+			currentValueString = BigWigs:FormatLargeNumber(currentValue).." "..L["HP"]
 			currentPercent = math.floor(currentValue/UnitHealthMax(monitorBarCache[i][2]) * 100)
 		elseif monitorBarCache[i][3] == "mana" and UnitExists(monitorBarCache[i][2]) then
 			currentValue = UnitMana(monitorBarCache[i][2])
-			currentValueString = currentValue.." "..L["Mana"]
+			currentValueString = BigWigs:FormatLargeNumber(currentValue).." "..L["Mana"]
 			currentPercent = math.floor(currentValue/UnitManaMax(monitorBarCache[i][2]) * 100)
 		end
 		-- update bar
 		bar.elapsed = 100 - currentPercent
-		candybar:Update(id)
+		candybar:Update(monitorBarCache[i][1])
 
 		-- piece together new bar text
 		local assembledText = monitorBarCache[i][4]
 		if monitorBarCache[i][5] == true and UnitExists(monitorBarCache[i][2]) then
-			assembledText = assembledText.." "..BigWigs:RaidTargetLookup(GetRaidTargetIndex(monitorBarCache[i][2]))
+			assembledText = assembledText.." "..BigWigs:RaidTargetLookup(GetRaidTargetIndex(monitorBarCache[i][2]), true)
 		end
 		if UnitExists(monitorBarCache[i][2]) and not UnitIsDead(monitorBarCache[i][2]) then
 			assembledText = assembledText.." - "..currentValueString
@@ -937,7 +940,7 @@ function BigWigsBars:UpdateAllMonitorBars()
 			assembledText = assembledText.." - "..L["dead"]
 		end
 		-- update bar
-		candybar:SetText(id, assembledText)
+		candybar:SetText(monitorBarCache[i][1], assembledText)
 	end
 
 	-- check again in quarter of a second; non-repeatable so it auto-cancels if bar cache is empty

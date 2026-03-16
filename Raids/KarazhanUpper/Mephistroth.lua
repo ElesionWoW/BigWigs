@@ -331,7 +331,7 @@ function module:OnEnemyDeath(msg)
 			fail_shards = 6
 			self:Sync(syncName.shardsChannelEnd)
 		elseif self.db.profile.shardscount then
-			self:Message(fail_shards..L.msg_shardsRemaining, "Positive")
+			self:Message(fail_shards..L.msg_shardsRemaining, "Positive", true, false)
 		end
 	end
 end
@@ -384,7 +384,7 @@ function module:EnemyBuffEvent(msg)
 	-- Unfathomed Hatred (shard fail)
 	if string.find(msg, L.trigger_shardsFail) then
 		if self.db.profile.shardschannel then
-			self:Message(L.msg_shardsFail, "Important", true, "Alert")
+			self:Message(L.msg_shardsFail, "Important", nil, "Alert")
 		end
 	end
 end
@@ -443,7 +443,7 @@ function module:BigWigs_RecvSync(sync, rest, nick)
 	elseif sync == syncName.shardsChannelEnd then
 		self:RemoveBar(L.bar_shardsChannel)
 		if self.db.profile.shardschannel then
-			self:Message(L.msg_shardsOver, "Positive", true, "Long")
+			self:Message(L.msg_shardsOver, "Positive", nil, "Long")
 		end
 
 	elseif sync == syncName.doomGain and rest then
@@ -509,7 +509,7 @@ function module:ShackleShatter(player)
 	end
 	player = player == UnitName("player") and "You" or player
 	local message = player .. L.msg_shackleShatter
-	self:Message(message, "Important", false, nil, false)
+	self:Message(message, "Important", nil, "Alert")
 	print(message)
 end
 
@@ -579,7 +579,7 @@ function module:NathrezimTerror()
 	self:RemoveBar(L.bar_fearCD)
 
 	if self.db.profile.fearcast then
-		self:Message(L.msg_fearCast, "Core")
+		self:Message(L.msg_fearCast, "Core", nil, false)
 		self:Bar(L.bar_fearCast, timer.fearCast, icon.fear, true, "Cyan")
 	end
 	if self.db.profile.fearcd then

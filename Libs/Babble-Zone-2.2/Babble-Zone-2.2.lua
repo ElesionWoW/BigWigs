@@ -36,9 +36,11 @@ BabbleZone:RegisterTranslations("enUS", function()
 		["Balor"] = true,
 		["Blackrock Spire"] = true,
 		["Blackstone Island"] = true,
+		["Blood Ring"] = true, --arena
 		["Dragonmaw Retreat"] = true,
 		["Crescent Grove"] = true,
 		["Emerald Sanctum"] = true,
+		["Frostmane Hollow"] = true, --1.18.1
 		["Gillijim's Isle"] = true,
 		["Gilneas City"] = true,
 		["Gilneas"] = true,
@@ -51,7 +53,9 @@ BabbleZone:RegisterTranslations("enUS", function()
 		["Lapidis Isle"] = true,
 		["Lower Karazhan Halls"] = true,
 		["Moomoo Grove"] = true,
+		["Moonwhisper Coast"] = true, --1.18.1
 		["Northwind"] = true,
+		["Ruins of Lordaeron"] = true, --arena
 		["Scarlet Monastery Armory"] = true,
 		["Scarlet Monastery Cathedral"] = true,
 		["Scarlet Monastery Graveyard"] = true,
@@ -62,12 +66,16 @@ BabbleZone:RegisterTranslations("enUS", function()
 		["Stormwrought Descent"] = true,
 		["Stormwrought Ruins"] = true,
 		["Sunnyglade Valley"] = true,
+		["Sunstrider Court"] = true, --arena
 		["Tel'Abim"] = true,
 		["Thalassian Highlands"] = true,
 		["The Black Morass"] = true,
 		["The Rock of Desolation"] = true,
 		["The Upper Necropolis"] = true,
+		["Thorn Gorge"] = true, --1.18.1 battleground
+		["Timbermaw Hold"] = true, --1.18.1
 		["Tower of Karazhan"] = true,
+		["Windhorn Canyon"] = true, --1.18.1
 		["Winter Veil Vale"] = true,
 		["???"] = true, --1.17 name for The Rock of Desolation
 		

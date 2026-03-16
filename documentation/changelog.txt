@@ -2,6 +2,25 @@
 Changelog for BigWigs - Golden Edition
 --------------------------------------
 
+March Update - 2026-03-16 (Golden 30136)
+------------
+(AQ40) C'Thun - improved map coordinates (by DCV-2142), fixed rounding for tentacle HP announcement
+(Naxx) Maexxna - HP bars for Web Wrap victims, prevent sync spam
+(Naxx) Thaddius - switched to MonitorBars for Phase 1 adds
+(K40) Rupturan - added Fragment health bars, improved cast timers, earlier Window of Opportunity tracking (at 25%, up from 15%)
+(K40) Gnarlmoon - replaced Owl HP frame with MonitorBars, minor adjustments
+(K40) Chess - MC announce and HP bars, upcoming hide warning (8% HP), better Bishop scanning, shortened some messages and made Queen's Fury messages brighter
+(K40) adjusted lots of warning messages for a) sound (silenced some, adjusted others) and b) compatibility with the RaidWarn plugin (don't push personal warnings to /rw if enabled)
+
+(Core) new helper functions: BigWigs:FormatLargeNumber(integer), BigWigs:BuffIsPresent(unitId, spellId), BigWigs:DebuffIsPresent(unitId, spellId), BigWigs:AuraIsPresent(unitId, spellId), BigWigs:GetCastTimeCoefficient(unitId), BigWigs:GetHealthPercent(unitId, round); optional colorization for string output of BigWigs:RaidTargetLookup(input, colorize)
+(Bars) MonitorBar polish - shortened values, colored marks, dark background, performance improvement
+(Colors) added raid mark colors, new BigWigsColors:ColorizeString(input, color)
+(Sound) enabled "Hide" sound cue
+(Libs) additions to Babble Boss & Babble Zone (1.18, known 1.18.1 stuff)
+
+(CommonAuras) - fix for number sync at Fear Ward and Spirit Link (by pepopo978 and DCV-2142)
+
+
 February Update - 2026-03-01 (Golden 30135)
 ---------------
 (MC) Thaurissan - correct positioning is now recognized, added warning about upcoming floor zones recasts

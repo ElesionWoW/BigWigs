@@ -176,7 +176,7 @@ L:RegisterTranslations("esES", function()
 		["Moon"] = "Luna",
 		["Square"] = "Cuadrado",
 		["Cross"] = "Cruz",
-		["Skull"] = "Cráneo",
+		["Skull"] = "Calavera",
 		["none"] = "ninguna",
 		["unmarked"] = "sin marcar",
 	}
@@ -237,12 +237,12 @@ L:RegisterTranslations("deDE", function()
 		-- Raid Marks
 		["Star"] = "Stern",
 		["Circle"] = "Kreis",
-		["Diamond"] = "Raute",
+		["Diamond"] = "Diamant",
 		["Triangle"] = "Dreieck",
 		["Moon"] = "Mond",
 		["Square"] = "Quadrat",
 		["Cross"] = "Kreuz",
-		["Skull"] = "Schädel",
+		["Skull"] = "Totenkopf",
 		["none"] = "keine",
 		["unmarked"] = "unmarkiert",
 	}
@@ -1638,8 +1638,7 @@ function BigWigs:GetTargetByName(name, depth)
 	depth = depth or 1 -- default to targets of raid members
 	local unitId = BigWigs:GetUnitIdByName(name, depth)
 	if unitId then 
-		local target = UnitName(unitId.."target")
-		return target
+		return UnitName(unitId.."target")
 	end
 end
 
@@ -1688,7 +1687,7 @@ function BigWigs:OffsetGUID(input, offset)
 	return prefix..string.format("%08X",highOutput)..string.format("%08X",lowOutput)
 end
 
-function BigWigs:RaidTargetLookup(input)
+function BigWigs:RaidTargetLookup(input, colorize)
 	local raidTargets = {
 		[0] = "none", -- following pattern of SetRaidTarget()
 		[1] = "Star",
@@ -1704,7 +1703,13 @@ function BigWigs:RaidTargetLookup(input)
 	-- convert index to name
 	if type(input) == "number" then
 		local output = raidTargets[input]
-		if output then return L[output] end --localize output for displaying
+		if output then --localize output for displaying
+			if colorize then
+				return BigWigsColors:ColorizeString(L[output], output)
+			else
+				return L[output]
+			end
+		end
 
 	-- convert name to index
 	elseif type(input) == "string" then
@@ -1717,7 +1722,96 @@ function BigWigs:RaidTargetLookup(input)
 
 	-- nil means unmarked following pattern of GetRaidTargetIndex()
 	elseif type(input) == "nil" then
-		return L["unmarked"]
+		if colorize then
+			return BigWigsColors:ColorizeString(L["unmarked"], "unmarked")
+		else
+			return L["unmarked"]
+		end
+	end
+end
+
+function BigWigs:FormatLargeNumber(integer)
+	local integerString = tostring(integer)
+	local length = string.len(integerString)
+		
+	-- following the design of the default UI we want to return no more than 4 significant digits
+	if length < 5 then return integerString end
+	
+	-- the 1.12 client uses signed 32 bit integers for values like health, so we don't need to worry about anything above 2 billion
+	local suffix = "k"
+	if length > 7 then
+		suffix = "m"
+		length = length - 3
+	end
+
+	if length == 5 then
+		return string.sub(integerString,1,2).."."..string.sub(integerString,3,4)..suffix
+	elseif length == 6 then
+		return string.sub(integerString,1,3).."."..string.sub(integerString,4,4)..suffix
+	elseif length == 7 then
+		return string.sub(integerString,1,4)..suffix
+	end
+end
+
+function BigWigs:BuffIsPresent(unitId, spellId)
+	if UnitExists(unitId) then
+		local i = 1
+		while UnitBuff(unitId, i) do
+			local _,_,foundId = UnitBuff(unitId, i)
+			if foundId == spellId then
+				return true
+			end
+			i = i + 1
+		end
+	end
+end
+
+function BigWigs:DebuffIsPresent(unitId, spellId)
+	if UnitExists(unitId) then
+		local i = 1
+		while UnitDebuff(unitId, i) do
+			local _,_,_,foundId = UnitDebuff(unitId, i)
+			if foundId == spellId then
+				return true
+			end
+			i = i + 1
+		end
+	end
+end
+
+function BigWigs:AuraIsPresent(unitId, spellId)
+	return BigWigs:DebuffIsPresent(unitId, spellId) or BigWigs:BuffIsPresent(unitId, spellId)
+end
+
+function BigWigs:GetCastTimeCoefficient(unitId)
+	local debuffs = { -- {spellId, multiplier, skip next if found}
+		[1] = {11719, 1.6, 1}, -- Curse of Tongues Rank 2
+		[2] = {1714, 1.5, 0}, -- Curse of Tongues Rank 1
+		[3] = {11398, 1.6, 2}, -- Mind-numbing Poison III
+		[4] = {8692, 1.5, 1}, -- Mind-numbing Poison II
+		[5] = {5760, 1.4, 0}, -- Mind-numbing Poison I
+	}
+	local coefficient = 1
+	
+	if UnitExists(unitId) then
+		for i=1,table.getn(debuffs) do
+			if BigWigs:AuraIsPresent(unitId, debuffs[i][1]) then
+				coefficient = coefficient * debuffs[i][2]
+				i = i + debuffs[i][3] -- skip checking lower ranks
+			end
+		end
+	end
+	
+	return coefficient
+end
+
+function BigWigs:GetHealthPercent(unitId, round)
+	if UnitExists(unitId) then
+		if round then
+			return math.floor(UnitHealth(unitId)/UnitHealthMax(unitId) * 100)
+		else
+			return UnitHealth(unitId)/UnitHealthMax(unitId) * 100
+		end
 	end
 end
 

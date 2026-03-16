@@ -148,7 +148,7 @@ BigWigsCommonAuras.defaultDB = {
 	autofocus = false
 }
 BigWigsCommonAuras.consoleCmd = L["commonauras"]
-BigWigsCommonAuras.revision = 30065
+BigWigsCommonAuras.revision = 30066
 BigWigsCommonAuras.external = true
 BigWigsCommonAuras.consoleOptions = {
 	type = "group",
@@ -505,10 +505,10 @@ function BigWigsCommonAuras:UNIT_CASTEVENT(caster,target,action,spell_id,cast_ti
 	-- this technically false-postives on cast completions but it shouldn't matter for our purpose
 	local name,rank = SpellInfo(spell_id)
 	local fullname = rank == "" and name or format("%s(%s)",name,rank)
-	self:SpellStatusV2_SpellCastInstant(spell_id, name, rank, fullname, cast_time, target and UnitName(target))
+	self:SpellStatusV2_SpellCastInstant(spell_id, name, rank, fullname, cast_time, nil, nil, nil, target and UnitName(target))
 end
 
-function BigWigsCommonAuras:SpellStatusV2_SpellCastInstant(sId, sName, sRank, sFullName, sCastTime, target)
+function BigWigsCommonAuras:SpellStatusV2_SpellCastInstant(sId, sName, sRank, sFullName, sCastTime, sStopTime, sDuration, sDelay, target)
 	local targetName = target
 	if sName == BS["Fear Ward"] then
 		if not targetName then
@@ -777,6 +777,7 @@ function BigWigsCommonAuras:BigWigs_RecvSync(sync, rest, nick)
 			self:PFUIFocus(rest)
 		end
 	elseif self.db.profile.fearward and sync == "BWCAFW" and rest then
+		if tonumber(rest) then rest = "?" end -- cosmetic fix for timestamp sync
 		self:TriggerEvent("BigWigs_Message", nick .. L["msg_fearward"] .. rest, "Positive", false, nil, false)
 		self:TriggerEvent("BigWigs_StartBar", self, nick .. L["bar_fearward"], timer.fearward, icon.fearward, true, color.fearward)
 	elseif self.db.profile.shieldwall and sync == "BWCASW" then
@@ -810,6 +811,7 @@ function BigWigsCommonAuras:BigWigs_RecvSync(sync, rest, nick)
 
 	elseif self.db.profile.spiritlink and sync == "BWCASL" and rest then
 		-- self:TriggerEvent("BigWigs_Message", L["msg_spiritLink"] .. rest, "Important", false, nil, false) -- noise
+		if tonumber(rest) then rest = nick end -- cosmetic fix for timestamp sync
 		self:TriggerEvent("BigWigs_Sound", "Info")
 		self:TriggerEvent("BigWigs_StartBar", self, rest .. L["bar_spiritLink"], timer.spiritLink, icon.spiritLink, true, color.spiritLink, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, nick, false)
 

@@ -18,8 +18,6 @@ module.defaultDB = {
 	owlphase = true,
 	owlenrage = true,
 	owlhpframe = true,
-	owlframeposx = 100,
-	owlframeposy = 400,
 	owlgaze = true,
 	printkeeper = false,
 }
@@ -58,8 +56,8 @@ L:RegisterTranslations("enUS", function()
 		owlenrage_desc = "Warns when the Owls are about to enrage",
 
 		owlhpframe_cmd = "owlhpframe",
-		owlhpframe_name = "Owl HP Frame",
-		owlhpframe_desc = "Shows a frame with the owl HP during owl phases",
+		owlhpframe_name = "Owl HP Bars",
+		owlhpframe_desc = "Shows HP bars during owl phases",
 
 		owlgaze_cmd = "owlgaze",
 		owlgaze_name = "Owl Gaze Alert",
@@ -69,11 +67,6 @@ L:RegisterTranslations("enUS", function()
 		printkeeper_name = "Troubleshoot Info",
 		printkeeper_desc = "Print information to your main chat window: Owl kill time stamps",
 
-
-		lowRedOwl = "Low Red Owl",
-		lowBlueOwl = "Low Blue Owl",
-		highRedOwl = "High Red Owl",
-		highBlueOwl = "High Blue Owl",
 
 		trigger_lunarShiftCast = "Keeper Gnarlmoon begins to perform Lunar Shift",
 		bar_lunarShiftCast = "Lunar Shift Casting!",
@@ -89,8 +82,14 @@ L:RegisterTranslations("enUS", function()
 		trigger_owlPhaseStart = "Keeper Gnarlmoon gains Worgen Dimension",
 		trigger_owlKill = "Owl dies.", --CHAT_MSG_COMBAT_HOSTILE_DEATH
 		trigger_owlPhaseEnd = "Worgen Dimension fades from Keeper Gnarlmoon",
-		msg_owlPhaseStart = "Owl Phase begins - kill the owls at the same time within 1 min!",
+		msg_owlPhaseStart = "Owl Phase - kill at the same time",
 		msg_owlPhaseEnd = "Owl Phase ended!",
+		unit_owlBlue = "Blue Owl",
+		unit_owlRed = "Red Owl",
+		bar_owlBlueClose = "Blue Front",
+		bar_owlBlueFar = "Blue Back",
+		bar_owlRedClose = "Red Front",
+		bar_owlRedFar = "Red Back",
 
 		bar_owlEnrage = "Owls Enrage",
 		msg_owlEnrage = "Owls will enrage in 10 seconds!",
@@ -133,14 +132,17 @@ local icon = {
 	blueMoon = "inv_ore_arcanite_02",
 	bloodBoil = "Spell_Shadow_BloodBoil",
 	ravens = "Ability_Hunter_Pet_Bat",
+	owl = "Ability_Hunter_Pet_Owl",
 }
 
 local color = {
 	lunarShift = "Blue",
 	owlPhase = "Green",
-	owlEnrage = "Red",
+	owlEnrage = "Orange",
 	bloodBoil = "Red",
 	ravens = "Black",
+	owlRed = "ff4444",
+	owlBlue = "2277ff",
 }
 
 local syncName = {
@@ -156,22 +158,13 @@ local spellIds = {
 	ravens = 51083, -- Flock of Ravens
 }
 
-function module:OnSetup()
-	self.started = nil
-
-	-- Used to monitor when owl phase will begin
-	self.lowHp = nil
-	self.midHp = nil
-	self.gnarlHealth = 100
-
-	-- Reset owl health values
-	self.lowRedOwlHp = 100
-	self.lowBlueOwlHp = 100
-	self.highRedOwlHp = 100
-	self.highBlueOwlHp = 100
-
-	self.owlsExist = false
-end
+local guid = {
+	gnarlmoon = "0xF13000F1F3276A33",
+	owlRedClose = nil,
+	owlRedFar = nil,
+	owlBlueClose = nil,
+	owlBlueFar = nil,
+}
 
 function module:OnEnable()
 	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE")
@@ -191,33 +184,20 @@ function module:OnEnable()
 		self:RegisterCastEventsForUnitName("Keeper Gnarlmoon", "GnarlmoonCastEvent")
 	end
 
-	-- Store owl health
-	self.lowRedOwlHp = 100
-	self.lowBlueOwlHp = 100
-	self.highRedOwlHp = 100
-	self.highBlueOwlHp = 100
-
-	-- Create the owl status frame but keep it hidden until needed
-	if self.db.profile.owlhpframe then
-		self:UpdateOwlStatusFrame()
-		self.owlStatusFrame:Show() -- let people position before fight
-	end
+	-- enable custom colors
+	BigWigsColors:RegHex(color.owlRed)
+	BigWigsColors:RegHex(color.owlBlue)
 end
 
-function module:OnEngage()
-	if self.owlStatusFrame then
-		self.owlStatusFrame:Hide()
-	end
+function module:OnSetup()	
+	self.started = nil
 
-	-- Used to monitor when owl phase will begin
 	self.lowHp = nil
 	self.midHp = nil
 	self.gnarlHealth = 100
+end
 
-	-- Make sure the owl frame is hidden at the start of the encounter
-	self.owlsExist = false
-	self:UpdateOwlStatusFrame()
-
+function module:OnEngage()
 	if self.db.profile.lunarshift then
 		self:Bar(L["bar_lunarShiftCD"], timer.lunarShiftCD, icon.lunarShift, true, color.lunarShift)
 	end
@@ -226,19 +206,18 @@ function module:OnEngage()
 		self:Bar(L["bar_ravens"], timer.ravenSummon[1], icon.ravens, true, color.ravens)
 	end
 	if self.db.profile.ravens then
-		self:DelayedMessage(timer.ravenSummon[1] - 5, L["msg_ravensSoon"], "Important", false, nil, false)
+		self:DelayedMessage(timer.ravenSummon[1] - 5, L["msg_ravensSoon"], "Important")
 	end
 
+	self.lowHp = nil
+	self.midHp = nil
+	self.gnarlHealth = 100
 	self:ScheduleRepeatingEvent("CheckHps", self.CheckHps, 1, self)
 end
 
 function module:OnDisengage()
-	if self:IsEventScheduled("CheckHps") then
-		self:CancelScheduledEvent("CheckHps")
-	end
-
-	self.owlsExist = false
-	self:UpdateOwlStatusFrame()
+	self:CancelScheduledEvent("CheckHps")
+	self:StopMonitoringOwls()
 end
 
 function module:CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE(msg)
@@ -337,7 +316,7 @@ function module:Ravens()
 		self:Bar(L["bar_ravens"], timer.ravenSummon[2], icon.ravens, true, color.ravens)
 	end
 	if self.db.profile.ravens then
-		self:DelayedMessage(timer.ravenSummon[2] - 5, L["msg_ravensSoon"], "Important", false, nil, false)
+		self:DelayedMessage(timer.ravenSummon[2] - 5, L["msg_ravensSoon"], "Important")
 	end
 end
 
@@ -345,15 +324,9 @@ function module:OwlPhaseStart()
 	if self.db.profile.printkeeper then
 		print("Start of Owl Phase")
 	end
-	-- set owl hps to 100
-	self.lowRedOwlHp = 100
-	self.lowBlueOwlHp = 100
-	self.highRedOwlHp = 100
-	self.highBlueOwlHp = 100
 	
 	if self.db.profile.owlphase then		
-		self:Message(L["msg_owlPhaseStart"], "Attention")
-		self:Sound("Alarm")
+		self:Message(L["msg_owlPhaseStart"], "Attention", nil, "Alarm")
 	end
 
 	if self.db.profile.owlenrage then
@@ -370,8 +343,7 @@ function module:OwlPhaseStart()
 	self:RemoveBar(L["bar_bloodBoil"])
 
 	if self.db.profile.owlhpframe then
-		self.owlsExist = true
-		self:UpdateOwlStatusFrame()
+		self:FindOwls()
 	end
 end
 
@@ -392,7 +364,7 @@ end
 
 function module:OwlPhaseEnd()
 	if self.db.profile.owlphase then
-		self:Message(L["msg_owlPhaseEnd"], "Positive")
+		self:Message(L["msg_owlPhaseEnd"], "Positive", nil, "Long")
 	end
 
 	local enrageBar, time, elapsed = self:BarStatus(L["bar_owlEnrage"])
@@ -406,265 +378,72 @@ function module:OwlPhaseEnd()
 		self:RemoveBar(L["bar_owlEnrage"])
 	end
 
-	self.owlsExist = false
-	self:UpdateOwlStatusFrame()
+	self:StopMonitoringOwls()
 end
 
 function module:CheckHps()
-	-- For tracking owl health
-	local lowestRedOwlHp = 100
-	local lowestBlueOwlHp = 100
-	local highestRedOwlHp = 0
-	local highestBlueOwlHp = 0
-
-	for i = 1, GetNumRaidMembers() do
-		local targetString = "raid" .. i .. "target"
-		local targetName = UnitName(targetString)
-
-		if targetName == module.translatedName then
-			-- Check Gnarlmoon's health
-			local tempH = UnitHealth(targetString)
-			if tempH > 0 then
-				local tempM = UnitHealthMax(targetString)
-				if tempM and tempM > 0 then
-					local health = tempH / tempM * 100
-					if health < 100 then
-						self.gnarlHealth = health
-					end
-				end
-			end
-		elseif self.owlsExist and targetName and string.find(targetName, "Owl") then
-			-- Calculate owl health percentage
-			local owlHealth = 100
-			local h = UnitHealth(targetString)
-			local m = UnitHealthMax(targetString)
-
-			if h and m and m > 0 then
-				owlHealth = math.floor((h / m) * 100)
-			end
-
-			-- Check owl name to determine type and track lowest health
-			if string.find(targetName, "Red") then
-				if owlHealth < lowestRedOwlHp then
-					lowestRedOwlHp = owlHealth
-				end
-				if owlHealth > highestRedOwlHp then
-					highestRedOwlHp = owlHealth
-				end
-			elseif string.find(targetName, "Blue") then
-				if owlHealth < lowestBlueOwlHp then
-					lowestBlueOwlHp = owlHealth
-				end
-				if owlHealth > highestBlueOwlHp then
-					highestBlueOwlHp = owlHealth
-				end
-			end
-		end
-	end
-
-	-- During test function, don't reset owl health
-	if self.owlsExist and not self.testInProgress then
-		-- Only update if the new health is lower than current health
-		if lowestRedOwlHp < 100 then
-			self.lowRedOwlHp = lowestRedOwlHp
-		end
-
-		if lowestBlueOwlHp < 100 then
-			self.lowBlueOwlHp = lowestBlueOwlHp
-		end
-
-		if highestRedOwlHp > 0 then
-			self.highRedOwlHp = highestRedOwlHp
-		end
-
-		if highestBlueOwlHp > 0 then
-			self.highBlueOwlHp = highestBlueOwlHp
-		end
-	end
-
-	if self.owlsExist then
-		self:UpdateOwlStatusFrame()
+	local percent = BigWigs:GetHealthPercent(guid.gnarlmoon)
+	if percent then
+		self.gnarlHealth = percent
 	end
 
 	-- Handle Gnarlmoon's health thresholds for phase warnings
 	if self.gnarlHealth < 71 and self.midHp == nil then
 		self.midHp = true
-		self:Message(L["msg_midHp"], "Urgent", true, nil, false)
-		self:Sound("Info")
+		self:Message(L["msg_midHp"], "Urgent", true, "Info")
 	end
 
 	if self.gnarlHealth < 38 and self.lowHp == nil then
 		self.lowHp = true
-		self:Message(L["msg_lowHp"], "Urgent", true, nil, false)
-		self:Sound("Info")
+		self:Message(L["msg_lowHp"], "Urgent", true, "Info")
+		self:CancelScheduledEvent("CheckHps")
 	end
 end
 
-function module:UpdateOwlStatusFrame()
-	if not self.db.profile.owlhpframe then
-		return
-	end
-
-	-- Create frame if needed
-	if not self.owlStatusFrame then
-		self.owlStatusFrame = CreateFrame("Frame", "GnarlmoonOwlStatusFrame", UIParent)
-		self.owlStatusFrame.module = self
-		self.owlStatusFrame:SetWidth(200)  -- Wider to fit columns
-		self.owlStatusFrame:SetHeight(90)  -- Increased height for more padding
-		self.owlStatusFrame:ClearAllPoints()
-		local s = self.owlStatusFrame:GetEffectiveScale()
-		self.owlStatusFrame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", (self.db.profile.owlframeposx or 100) / s, (self.db.profile.owlframeposy or 400) / s)
-		self.owlStatusFrame:SetBackdrop({
-			bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-			edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-			tile = true,
-			tileSize = 16,
-			edgeSize = 16,
-			insets = { left = 8, right = 8, top = 8, bottom = 8 }
-		})
-		self.owlStatusFrame:SetBackdropColor(0, 0, 0, 1)
-
-		-- Allow dragging
-		self.owlStatusFrame:SetMovable(true)
-		self.owlStatusFrame:EnableMouse(true)
-		self.owlStatusFrame:RegisterForDrag("LeftButton")
-		self.owlStatusFrame:SetScript("OnDragStart", function()
-			this:StartMoving()
-		end)
-		self.owlStatusFrame:SetScript("OnDragStop", function()
-			this:StopMovingOrSizing()
-
-			local scale = this:GetEffectiveScale()
-			this.module.db.profile.owlframeposx = this:GetLeft() * scale
-			this.module.db.profile.owlframeposy = this:GetTop() * scale
-		end)
-
-		local font = "Fonts\\FRIZQT__.TTF"
-		local fontSize = 12
-
-		-- Frame title
-		self.owlStatusFrame.title = self.owlStatusFrame:CreateFontString(nil, "ARTWORK")
-		self.owlStatusFrame.title:SetFontObject(GameFontNormal)
-		self.owlStatusFrame.title:SetPoint("TOP", self.owlStatusFrame, "TOP", 0, -10)
-		self.owlStatusFrame.title:SetText("Owl HP")
-		self.owlStatusFrame.title:SetFont(font, fontSize)
-
-		-- Red Column Header (Left Side)
-		self.owlStatusFrame.redHeader = self.owlStatusFrame:CreateFontString(nil, "ARTWORK")
-		self.owlStatusFrame.redHeader:SetFontObject(GameFontNormal)
-		self.owlStatusFrame.redHeader:SetPoint("TOPLEFT", self.owlStatusFrame, "TOPLEFT", 15, -25)
-		self.owlStatusFrame.redHeader:SetText("Red")
-		self.owlStatusFrame.redHeader:SetFont(font, fontSize)
-		self.owlStatusFrame.redHeader:SetTextColor(1, 0.3, 0.3)
-
-		-- Blue Column Header (Right Side)
-		self.owlStatusFrame.blueHeader = self.owlStatusFrame:CreateFontString(nil, "ARTWORK")
-		self.owlStatusFrame.blueHeader:SetFontObject(GameFontNormal)
-		self.owlStatusFrame.blueHeader:SetPoint("TOPRIGHT", self.owlStatusFrame, "TOPRIGHT", -15, -25)
-		self.owlStatusFrame.blueHeader:SetText("Blue")
-		self.owlStatusFrame.blueHeader:SetFont(font, fontSize)
-		self.owlStatusFrame.blueHeader:SetTextColor(0.3, 0.3, 1)
-
-		-- Create invisible anchor frames for precise alignment
-		local leftAnchor = CreateFrame("Frame", nil, self.owlStatusFrame)
-		leftAnchor:SetPoint("CENTER", self.owlStatusFrame, "CENTER", -60, 0)
-		leftAnchor:SetWidth(1)
-		leftAnchor:SetHeight(1)
-
-		local rightAnchor = CreateFrame("Frame", nil, self.owlStatusFrame)
-		rightAnchor:SetPoint("CENTER", self.owlStatusFrame, "CENTER", 60, 0)
-		rightAnchor:SetWidth(1)
-		rightAnchor:SetHeight(1)
-
-		-- Low Owls Row Label
-		self.owlStatusFrame.lowLabel = self.owlStatusFrame:CreateFontString(nil, "ARTWORK")
-		self.owlStatusFrame.lowLabel:SetFontObject(GameFontNormal)
-		self.owlStatusFrame.lowLabel:SetPoint("CENTER", self.owlStatusFrame, "CENTER", 0, -10)
-		self.owlStatusFrame.lowLabel:SetText("Low")
-		self.owlStatusFrame.lowLabel:SetFont(font, fontSize)
-
-		-- High Owls Row Label
-		self.owlStatusFrame.highLabel = self.owlStatusFrame:CreateFontString(nil, "ARTWORK")
-		self.owlStatusFrame.highLabel:SetFontObject(GameFontNormal)
-		self.owlStatusFrame.highLabel:SetPoint("CENTER", self.owlStatusFrame, "CENTER", 0, -30)
-		self.owlStatusFrame.highLabel:SetText("High")
-		self.owlStatusFrame.highLabel:SetFont(font, fontSize)
-
-		-- Red Low Owl HP (left column)
-		self.owlStatusFrame.lowRedOwlHp = self.owlStatusFrame:CreateFontString(nil, "ARTWORK")
-		self.owlStatusFrame.lowRedOwlHp:SetFontObject(GameFontNormal)
-		self.owlStatusFrame.lowRedOwlHp:SetPoint("CENTER", leftAnchor, "CENTER", 0, -10)
-		self.owlStatusFrame.lowRedOwlHp:SetJustifyH("CENTER")
-		self.owlStatusFrame.lowRedOwlHp:SetFont(font, fontSize)
-		self.owlStatusFrame.lowRedOwlHp:SetTextColor(1, 0.3, 0.3)
-
-		-- Blue Low Owl HP (right column)
-		self.owlStatusFrame.lowBlueOwlHp = self.owlStatusFrame:CreateFontString(nil, "ARTWORK")
-		self.owlStatusFrame.lowBlueOwlHp:SetFontObject(GameFontNormal)
-		self.owlStatusFrame.lowBlueOwlHp:SetPoint("CENTER", rightAnchor, "CENTER", 0, -10)
-		self.owlStatusFrame.lowBlueOwlHp:SetJustifyH("CENTER")
-		self.owlStatusFrame.lowBlueOwlHp:SetFont(font, fontSize)
-		self.owlStatusFrame.lowBlueOwlHp:SetTextColor(0.3, 0.3, 1)
-
-		-- Red High Owl HP (left column)
-		self.owlStatusFrame.highRedOwlHp = self.owlStatusFrame:CreateFontString(nil, "ARTWORK")
-		self.owlStatusFrame.highRedOwlHp:SetFontObject(GameFontNormal)
-		self.owlStatusFrame.highRedOwlHp:SetPoint("CENTER", leftAnchor, "CENTER", 0, -30)
-		self.owlStatusFrame.highRedOwlHp:SetJustifyH("CENTER")
-		self.owlStatusFrame.highRedOwlHp:SetFont(font, fontSize)
-		self.owlStatusFrame.highRedOwlHp:SetTextColor(1, 0.3, 0.3)
-
-		-- Blue High Owl HP (right column)
-		self.owlStatusFrame.highBlueOwlHp = self.owlStatusFrame:CreateFontString(nil, "ARTWORK")
-		self.owlStatusFrame.highBlueOwlHp:SetFontObject(GameFontNormal)
-		self.owlStatusFrame.highBlueOwlHp:SetPoint("CENTER", rightAnchor, "CENTER", 0, -30)
-		self.owlStatusFrame.highBlueOwlHp:SetJustifyH("CENTER")
-		self.owlStatusFrame.highBlueOwlHp:SetFont(font, fontSize)
-		self.owlStatusFrame.highBlueOwlHp:SetTextColor(0.3, 0.3, 1)
-	end
-
-	-- Show/hide frame based on whether owls exist
-	if self.owlsExist then
-		self.owlStatusFrame:Show()
+function module:FindOwls()
+	local anyBlue = BigWigs:GetGUIDByName(L["unit_owlBlue"], 1)
+	if anyBlue then
+		local plusOne = BigWigs:OffsetGUID(anyBlue, 1)
+		if UnitExists(plusOne) and UnitName(plusOne) == L["unit_owlBlue"] then
+			guid.owlRedClose = BigWigs:OffsetGUID(anyBlue, -16777214)
+			guid.owlRedFar = BigWigs:OffsetGUID(anyBlue, -16777213)
+			guid.owlBlueClose = anyBlue
+			guid.owlBlueFar = plusOne
+			self:StartOwlMonitorBars()
+		else
+			guid.owlRedClose = BigWigs:OffsetGUID(anyBlue, -16777215)
+			guid.owlRedFar = BigWigs:OffsetGUID(anyBlue, -16777214)
+			guid.owlBlueClose = BigWigs:OffsetGUID(anyBlue, -1)
+			guid.owlBlueFar = anyBlue
+			self:StartOwlMonitorBars()
+		end
 	else
-		self.owlStatusFrame:Hide()
-		return
+		self:ScheduleEvent("GnarlmoonFindOwls", self.FindOwls, 0.2, self)
 	end
-
-	-- Update HP values
-	self:SetOwlHpText(self.owlStatusFrame.lowBlueOwlHp, self.lowBlueOwlHp)
-	self:SetOwlHpText(self.owlStatusFrame.lowRedOwlHp, self.lowRedOwlHp)
-	self:SetOwlHpText(self.owlStatusFrame.highBlueOwlHp, self.highBlueOwlHp)
-	self:SetOwlHpText(self.owlStatusFrame.highRedOwlHp, self.highRedOwlHp)
 end
 
-function module:SetOwlHpText(fontString, healthPercent)
-	if not fontString then
-		return
-	end
-
-	-- Format health percentage string
-	local text = healthPercent .. "%"
-
-	-- Color based on health percentage
-	local r, g, b = 1, 1, 1
-	if healthPercent <= 0 then
-		text = "DEAD"
-		r, g, b = 0.5, 0.5, 0.5
-	elseif healthPercent < 15 then
-		r, g, b = 1, 1, 0
-	end
-
-	-- Set the text and color
-	fontString:SetText(text)
-	fontString:SetTextColor(r, g, b)
+function module:StartOwlMonitorBars()
+	self:MonitorBar(L["bar_owlBlueClose"], icon.owl, guid.owlBlueClose, "health", false, false, false, true, color.owlBlue)
+	self:MonitorBar(L["bar_owlBlueFar"], icon.owl, guid.owlBlueFar, "health", false, false, false, true, color.owlBlue)
+	self:MonitorBar(L["bar_owlRedClose"], icon.owl, guid.owlRedClose, "health", false, false, false, true, color.owlRed)
+	self:MonitorBar(L["bar_owlRedFar"], icon.owl, guid.owlRedFar, "health", false, false, false, true, color.owlRed)
 end
 
--- Update the Test function to include Blood Boil events:
+function module:StopMonitoringOwls()
+	self:CancelScheduledEvent("GnarlmoonFindOwls")
+	self:RemoveBar(L["bar_owlBlueClose"])
+	self:RemoveBar(L["bar_owlBlueFar"])
+	self:RemoveBar(L["bar_owlRedClose"])
+	self:RemoveBar(L["bar_owlRedFar"])
+	guid.owlBlueClose = nil
+	guid.owlBlueFar = nil
+	guid.owlRedClose = nil
+	guid.owlRedFar = nil
+end
+
 function module:Test()
 	-- Initialize module state
-	self:OnSetup()
-	self:OnEnable()
+	self:Engage()
 
 	-- Flag to prevent resetting owl health during test
 	self.testInProgress = true
@@ -685,7 +464,7 @@ function module:Test()
 		-- Initial Lunar Shift
 		{ time = 10, func = function()
 			print("Test: Keeper Gnarlmoon begins to cast Lunar Shift")
-			module:CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE("Keeper Gnarlmoon begins to cast Lunar Shift.")
+			module:CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE("Keeper Gnarlmoon begins to perform Lunar Shift.")
 		end },
 
 		-- Second Blood Boil
@@ -710,7 +489,7 @@ function module:Test()
 		-- Second Lunar Shift
 		{ time = 21, func = function()
 			print("Test: Keeper Gnarlmoon begins to cast Lunar Shift")
-			module:CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE("Keeper Gnarlmoon begins to cast Lunar Shift.")
+			module:CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE("Keeper Gnarlmoon begins to perform Lunar Shift.")
 		end },
 
 		-- First Owl Phase (at 66.66% HP)
@@ -723,34 +502,16 @@ function module:Test()
 		{ time = 25, func = function()
 			print("Test: You are afflicted by Red Moon")
 			module:CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE("You are afflicted by Red Moon.")
-
-			module.lowRedOwlHp = 85
-			module.lowBlueOwlHp = 70
-			module.highRedOwlHp = 90
-			module.highBlueOwlHp = 75
-			module:UpdateOwlStatusFrame()
 		end },
 
 		{ time = 31, func = function()
 			print("Test: You are afflicted by Owl Gaze")
 			module:CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE("You are afflicted by Owl Gaze.")
-			
-			module.lowRedOwlHp = 50
-			module.lowBlueOwlHp = 45
-			module.highRedOwlHp = 55
-			module.highBlueOwlHp = 48
-			module:UpdateOwlStatusFrame()
 		end },
 
 		{ time = 33, func = function()
 			print("Test: You are afflicted by Blue Moon")
 			module:CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE("You are afflicted by Blue Moon.")
-
-			module.lowRedOwlHp = 15
-			module.lowBlueOwlHp = 12
-			module.highRedOwlHp = 18
-			module.highBlueOwlHp = 13
-			module:UpdateOwlStatusFrame()
 		end },
 
 		-- Owl Phase ends
@@ -762,7 +523,7 @@ function module:Test()
 		-- Third Lunar Shift
 		{ time = 40, func = function()
 			print("Test: Keeper Gnarlmoon begins to cast Lunar Shift")
-			module:CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE("Keeper Gnarlmoon begins to cast Lunar Shift.")
+			module:CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE("Keeper Gnarlmoon begins to perform Lunar Shift.")
 		end },
 
 		-- HP triggers for second owl phase
@@ -782,12 +543,6 @@ function module:Test()
 		{ time = 52, func = function()
 			print("Test: You are afflicted by Blue Moon")
 			module:CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE("You are afflicted by Blue Moon.")
-
-			module.lowRedOwlHp = 60
-			module.lowBlueOwlHp = 85
-			module.highRedOwlHp = 75
-			module.highBlueOwlHp = 90
-			module:UpdateOwlStatusFrame()
 		end },
 
 		-- Second Flock of Ravens (35s after first)
@@ -798,11 +553,6 @@ function module:Test()
 
 		{ time = 58, func = function()
 			print("Test: Red Owl dies.")
-			module.lowRedOwlHp = 0
-			module.lowBlueOwlHp = 45
-			module.highRedOwlHp = 42
-			module.highBlueOwlHp = 50
-			module:UpdateOwlStatusFrame()
 			module:CHAT_MSG_COMBAT_HOSTILE_DEATH("Red Owl dies.")
 		end },
 
@@ -820,7 +570,7 @@ function module:Test()
 		-- Final Lunar Shift
 		{ time = 75, func = function()
 			print("Test: Keeper Gnarlmoon begins to cast Lunar Shift")
-			module:CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE("Keeper Gnarlmoon begins to cast Lunar Shift.")
+			module:CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE("Keeper Gnarlmoon begins to perform Lunar Shift.")
 		end },
 
 		-- End test
@@ -840,4 +590,4 @@ function module:Test()
 	return true
 end
 
--- Usage: /run local m=BigWigs:GetModule("Keeper Gnarlmoon"); BigWigs:SetupModule("Keeper Gnarlmoon");m:Test();
+-- Usage: /run BigWigs:GetModule("Keeper Gnarlmoon"):Test();

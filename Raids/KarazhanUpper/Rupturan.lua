@@ -1,8 +1,8 @@
 local module, L = BigWigs:ModuleDeclaration("Rupturan the Broken", "Karazhan")
 
-module.revision = 30004
+module.revision = 30005
 module.enabletrigger = module.translatedName
-module.toggleoptions = { "boulderalert", "bouldermark", "bouldersay", "livingstone", "opportunity", -1, "igniteearth", "dirtmound", "dirtmoundmark", -1, "flamestrike", "flamestrikemove", "felheartalert", "felheartbar", "reform", "bosskill" }
+module.toggleoptions = { "boulderalert", "bouldermark", "bouldersay", "livingstone", "opportunity", -1, "igniteearth", "dirtmound", "dirtmoundmark", -1, "flamestrike", "flamestrikemove", "felheartalert", "felheartbar", "fragmentbars", "reform", "bosskill" }
 module.zonename = {
 	AceLibrary("AceLocale-2.2"):new("BigWigs")["Tower of Karazhan"],
 	AceLibrary("Babble-Zone-2.2")["Tower of Karazhan"],
@@ -11,6 +11,7 @@ module.zonename = {
 }
 
 local _, playerClass = UnitClass("player")
+local opportunityThreshold = 25
 
 module.defaultDB = {
 	boulderalert = false,
@@ -25,6 +26,7 @@ module.defaultDB = {
 	flamestrikemove = true,
 	felheartalert = true,
 	felheartbar = playerClass == "HUNTER" or playerClass == "PRIEST" or playerClass == "WARLOCK",
+	fragmentbars = true,
 	reform = true,
 }
 
@@ -53,7 +55,7 @@ L:RegisterTranslations("enUS", function() return {
 
 	opportunity_cmd = "opportunity",
 	opportunity_name = "Window of Opportunity",
-	opportunity_desc = "Warns about remaining or incoming Living Stones below 10% boss HP to avoid Explode mechanic (when the boss dies the remaining Living Stones detonate)",
+	opportunity_desc = "Warns about remaining or incoming Living Stones below "..opportunityThreshold.."% boss HP to avoid Explode mechanic (when the boss dies the remaining Living Stones detonate)",
 
 	igniteearth_cmd  = "igniteearth",
 	igniteearth_name = "Ignite Earth",
@@ -83,6 +85,10 @@ L:RegisterTranslations("enUS", function() return {
 	felheartbar_name = "Felheart Mana Bar",
 	felheartbar_desc = "Adds a continuously updating mana bar for Felheart.",
 
+	fragmentbars_cmd = "fragmentbars",
+	fragmentbars_name = "Fragment Health Bars",
+	fragmentbars_desc = "Show health bars for all 3 fragments in Phase 2.",
+
 	reform_cmd = "reform",
 	reform_name = "Reform Timer",
 	reform_desc = "When you kill a Fragment, show show time left until Rupturan will be reformed.",
@@ -107,12 +113,14 @@ L:RegisterTranslations("enUS", function() return {
 	msg_windowClosing    = "Stone incoming!",
 	msg_windowClosed     = "Stone alive! DON'T kill Rupturan",
 	msg_felheartMana     = "Felheart at %s%% mana!",
+	bar_fragment	     = "Frag",
 
 	-- Triggers
 	trigger_start        = "All shall crumble",
 	trigger_phase2       = "Let the cracks of this world destroy you",
 	trigger_boss_dead    = "Perished... To dust",
 	unit_felheart        = "Felheart",
+	unit_fragment        = "Fragment of Rupturan",
 
 	trigger_tb_cast      = "Rupturan the Broken begins to perform Throw Boulder",
 	trigger_tb_hit       = "Rupturan the Broken's Throw Boulder hits (.+) for",
@@ -148,6 +156,7 @@ local icon = {
 	reform		= "Spell_Nature_AstralRecalGroup",
 	window		= "INV_Misc_PocketWatch_01",
 	felheart	= "Spell_Holy_PrayerOfFortitude",
+	fragment	= "Spell_Nature_StrengthOfEarthTotem02",
 }
 
 local syncName = {
@@ -172,6 +181,9 @@ local spellIds = {
 local guid = {
 	rupturan = "0xF13000EA39073D35",
 	felheart = nil,
+	fragmentA = nil,
+	fragmentB = nil,
+	fragmentC = nil,
 }
 
 -- keep track of players to later reset raid marks, and active Living Stones
@@ -231,6 +243,7 @@ function module:OnEngage()
 	last_boulder = 0
 	active_living_stones = 0
 	last_mana_warn = 0
+	self:RemoveFragmentBars()
 end
 
 function module:OnDisengage()
@@ -238,10 +251,12 @@ function module:OnDisengage()
 	self:RemoveBar(L.bar_ls_earthstomp)
 	self:CancelDelayedBar(L.bar_ignite_earth_CD)
 	self:RemoveBar(L.bar_ignite_earth_CD)
+	self:RemoveFragmentBars()
 	self:RestorePreviousRaidTargetForPlayer(mound_chasing)
 	self:RestorePreviousRaidTargetForPlayer(boulder_victim)
 	self:CancelScheduledEvent("RupturanFindFelheart")
 	self:CancelScheduledEvent("RupturanCheckFelheart")
+	self:CancelScheduledEvent("RupturanFindFragments")
 end
 
 -------------------------------------------------------------------------------
@@ -274,6 +289,14 @@ function module:Event(msg)
 	end
 end
 
+function module:LowestFragmentCastTimeCoefficient()
+	local coefficientA = BigWigs:GetCastTimeCoefficient(guid.fragmentA)
+	local coefficientB = BigWigs:GetCastTimeCoefficient(guid.fragmentB)
+	local coefficientC = BigWigs:GetCastTimeCoefficient(guid.fragmentC)
+	
+	return math.min(coefficientA, coefficientB, coefficientC)
+end
+
 function module:UNIT_CASTEVENT(caster,target,action,spellId,castTime)
 	if spellId == spellIds.igniteEarth and action == "START" then
 		self:Sync(syncName.igniteEarth .. " " .. (castTime / 1000))
@@ -284,6 +307,11 @@ function module:UNIT_CASTEVENT(caster,target,action,spellId,castTime)
 		return
 	end
 	if spellId == spellIds.igniteRock and action == "START" then
+		-- check if perhaps other fragments have quicker casts (missing CoT) and sync the lowest cast time to warn about the first Ignite Rock
+		local shortestCast = timer.igniteRock * self:LowestFragmentCastTimeCoefficient() * 1000
+		if castTime > shortestCast then
+			castTime = shortestCast
+		end
 		self:Sync(syncName.igniteRock .. " " .. (castTime / 1000))
 		return
 	end
@@ -296,7 +324,8 @@ end
 function module:SpellEvent(msg)
 	-- non-SuperWoW Ignite Earth cast
 	if string.find(msg, L.trigger_igniteearth) and not SUPERWOW_VERSION then
-		self:Sync(syncName.igniteEarth .. " " .. timer.igniteEarthCast)
+		local castTime = timer.igniteEarthCast * BigWigs:GetCastTimeCoefficient(guid.rupturan)
+		self:Sync(syncName.igniteEarth .. " " .. castTime)
 		return
 	end
 
@@ -334,7 +363,9 @@ function module:SpellEvent(msg)
 
 	-- non-SuperWoW Ignite Rock cast
 	if string.find(msg, L.trigger_igniterock) and not SUPERWOW_VERSION  then
-		self:Sync(syncName.igniteRock .. " " .. timer.igniteRock)
+		-- sync lowest cast time among all Fragments (one might be missing CoT)
+		local castTime = timer.igniteRock * self:LowestFragmentCastTimeCoefficient()
+		self:Sync(syncName.igniteRock .. " " .. castTime)
 		return
 	end
 
@@ -404,7 +435,8 @@ end
 
 function module:IgniteEarth(castTime)
 	if not self.db.profile.igniteearth then return end
-	castTime = castTime or timer.igniteEarthCast
+	
+	castTime = castTime or (timer.igniteEarthCast * BigWigs:GetCastTimeCoefficient(guid.rupturan))
 
 	-- Remove any ongoing CD bar
 	self:CancelDelayedBar(L.bar_ignite_earth_CD)
@@ -420,7 +452,7 @@ end
 function module:DirtMoundQuake()
 	if not self.db.profile.dirtmound then return end
 
-	self:Message(L.msg_dm_quake, "Important", nil, "Alarm")
+	self:Message(L.msg_dm_quake, "Important", true, "Info")
 end
 
 function module:DirtMoundSpawn(player)
@@ -443,8 +475,7 @@ function module:DirtMoundSpawn(player)
 		for i=1,GetNumRaidMembers() do
 			local unit = "raid"..i
 			if UnitName(unit) == player and CheckInteractDistance(unit, 2) then
-				self:Message(format(L.msg_dm_target_near, player), "Important")
-				self:Sound("Alarm")
+				self:Message(format(L.msg_dm_target_near, player), "Important", true, "Alarm")
 				break
 			end
 		end
@@ -459,13 +490,18 @@ function module:Phase2()
 	-- clear popcorn mark
 	self:RestorePreviousRaidTargetForPlayer(mound_chasing)
 	mound_chasing = nil
-	-- start looking for Felheart
+	-- start looking for adds
+	guid.felheart = nil
 	self:FindFelheart()
+	guid.fragmentA = nil
+	guid.fragmentB = nil
+	guid.fragmentC = nil
+	self:FindFragments()
 end
 
 function module:IgniteRock(castTime)
 	if not self.db.profile.flamestrike then return end
-	castTime = castTime or timer.igniteRock
+	castTime = castTime or (timer.igniteRock * self:LowestFragmentCastTimeCoefficient())
 
 	self:Sound("Alarm")
 	self:WarningSign(icon.igniteRock, 3, true, L.warn_ignite_rock)
@@ -494,7 +530,7 @@ function module:ThrowBoulder(targetName)
 		SendChatMessage(L.say_boulder, "SAY")
 	end
 	
-	if self:GetHealth() <= 15 and self.db.profile.opportunity then
+	if self:GetHealth() <= opportunityThreshold and self.db.profile.opportunity then
 		self:Bar(L.bar_window, timer.boulderCast - 0.3, icon.window, true, "White")
 		if not self.db.profile.boulderalert then -- don't double up on messages
 			self:Message(L.msg_windowClosing, "Urgent", true, "Beware")
@@ -505,9 +541,9 @@ end
 function module:ThrowBoulderOutcome(outcome)
 	if outcome == "hit" then
 		active_living_stones = active_living_stones + 1
-		if self:GetHealth() <= 15 and self.db.profile.opportunity then
+		if self:GetHealth() <= opportunityThreshold and self.db.profile.opportunity then
 			self:RemoveBar(L.bar_window)
-			self:Message(L.msg_windowClosed, "Important", true, "Alert")
+			self:Message(L.msg_windowClosed, "Important", nil, "Alert")
 		end
 	end
 
@@ -535,7 +571,7 @@ function module:GetHealth()
 end
 
 function module:CheckOpportunity()
-	if self:GetHealth() > 15 or (not self.db.profile.opportunity) then return end
+	if self:GetHealth() > opportunityThreshold or (not self.db.profile.opportunity) then return end
 
 	local windowHigh = last_boulder + timer.boulderCD[2] + timer.boulderCast - GetTime()
 	if active_living_stones == 0 and windowHigh > 3 then
@@ -563,13 +599,43 @@ function module:CheckFelheart()
 	if self.db.profile.felheartalert and guid.felheart and UnitExists(guid.felheart) then
 		local percent = math.ceil(UnitMana(guid.felheart)/UnitManaMax(guid.felheart) * 100)
 		if percent >= 80 and last_mana_warn + 5 < GetTime() then
-			self:Message(string.format(L.msg_felheartMana, percent), "Core", true, "Beware")
+			self:Message(string.format(L.msg_felheartMana, percent), "Core", nil, "Beware")
 			last_mana_warn = GetTime()
 		end
 	else
 		-- if alert disabled or Felheart doesn't currently exist stop checking
 		self:CancelScheduledEvent("RupturanCheckFelheart")
 	end
+end
+
+function module:FindFragments()
+	local newFragment = BigWigs:GetGUIDByName(L.unit_fragment, 1, {guid.fragmentA, guid.fragmentB, guid.fragmentC}) -- can replace unit name for testing
+	if newFragment then
+		if not guid.fragmentA then
+			guid.fragmentA = newFragment
+		elseif not guid.fragmentB then
+			guid.fragmentB = newFragment
+		elseif not guid.fragmentC then
+			guid.fragmentC = newFragment
+			self:CreateFragmentBars()
+			return
+		end
+	end
+	self:ScheduleEvent("RupturanFindFragments", self.FindFragments, 0.2, self)
+end
+
+function module:CreateFragmentBars()
+	if self.db.profile.fragmentbars then
+		self:MonitorBar("fragmentA", icon.fragment, guid.fragmentA, "health", L.bar_fragment, true)
+		self:MonitorBar("fragmentB", icon.fragment, guid.fragmentB, "health", L.bar_fragment, true)
+		self:MonitorBar("fragmentC", icon.fragment, guid.fragmentC, "health", L.bar_fragment, true)
+	end
+end
+
+function module:RemoveFragmentBars()
+	self:RemoveBar("fragmentA")
+	self:RemoveBar("fragmentB")
+	self:RemoveBar("fragmentC")
 end
 
 -------------------------------------------------------------------------------

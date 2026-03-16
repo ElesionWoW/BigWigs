@@ -271,11 +271,7 @@ function module:OnRegister()
 end
 
 function module:OnEnable()
-	--self:RegisterEvent("CHAT_MSG_SAY", "Event") --Debug
-
 	self:RegisterEvent("CHAT_MSG_MONSTER_EMOTE") --trigger_weakened
-
-	--self:RegisterEvent("UNIT_HEALTH") --stomach tentacles hp
 
 	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE", "Event") --trigger_cthun_eyeBeam, trigger_giantEye_eyeBeam
 
@@ -824,8 +820,9 @@ function module:CheckFleshTentacles()
 
 	local percent = UnitHealth(guidSecond) / UnitHealthMax(guidSecond) * 100
 	if percent <= 20 then
-		self:Message(string.format(L["msg_secondTentacleLow"],percent), "Urgent")
+		self:Message(string.format(L["msg_secondTentacleLow"],math.ceil(percent)), "Urgent")
 		secondTentacleLowWarn = true
+		self:CancelScheduledEvent("CthunCheckFleshTentacles")
 	end
 end
 
@@ -834,11 +831,14 @@ end
 -- Utility Functions --
 -----------------------
 
-function GetCthunCoords(unit)
-	local posX, posY = GetPlayerMapPosition(unit)
-	posX = (18.25 * posX - 5.55) * cthunmap.map:GetWidth()
-	posY = (-12.1666666667 * posY + 5.5) * cthunmap.map:GetHeight()
-	return posX, posY
+function GetCthunCoords(unit) -- converts game map coordinates to C'Thun map coordinates
+	local posX, posY = GetPlayerMapPosition(unit) -- game map coordinates (values 0 to 1)
+	if not posX or not posY or (posX == 0 and posY == 0) then
+		return nil, nil
+	end
+	local mapX = 18.1806 * posX - 1.0604 * posY - 4.9941  -- C'Thun map X axis coordinates(values 0 to 1)
+	local mapY = -1.5906 * posX - 12.1205 * posY + 6.0044 -- C'Thun map Y axis coordinates(values 0 to -1 due to TOPLEFT anchoring)
+	return mapX * cthunmap.map:GetWidth(), mapY * cthunmap.map:GetHeight() -- calculates which pixel of the map texture the coordinates correspond to
 end
 
 function UpdateCthunMap()
@@ -849,7 +849,7 @@ function UpdateCthunMap()
 	local tooltipAnchor
 	for i = 1, 40 do
 		local coordX, coordY = GetCthunCoords("raid" .. i)
-		if coordX == 0 and coordY == 0 then
+		if not coordX or not coordY then
 			cthunmap.map.unit[i]:Hide()
 		else
 			cthunmap.map.unit[i]:Show()
@@ -1009,3 +1009,5 @@ function module:SetupMap()
 		CthunMapUnitIcon(i)
 	end
 end
+
+-- to test the map in an empty instance: /run BigWigs:EnableModule("C'Thun", true) cthunmap:Show()

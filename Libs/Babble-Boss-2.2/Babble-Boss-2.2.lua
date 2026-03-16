@@ -28,6 +28,25 @@ local BabbleBoss = AceLibrary("AceLocale-2.2"):new(MAJOR_VERSION)
 
 BabbleBoss:RegisterTranslations("enUS", function()
 	return {
+		["Ezzel Darkbrewer"] = true, --BWL extension
+		["Broodcommander Axelus"] = true, --Onyxia extension
+		["Smoldaris"] = true, --MC extension
+		["Basalthar"] = true,
+		["Sorcerer-Thane Thaurissan"] = true,
+		["Keeper Gnarlmoon"] = true, --Tower of Karazhan
+		["Ley-Watcher Incantagos"] = true,
+		["Anomalus"] = true,
+		["Echo of Medivh"] = true,
+		["Rook"] = true,
+		["Bishop"] = true,
+		["Knight"] = true,
+		["Queen"] = true,
+		["King"] = true,
+		["Sanv Tas'dal"] = true,
+		["Rupturan the Broken"] = true,
+		["Fragment of Rupturan"] = true,
+		["Kruul"] = true,
+		["Mephistroth"] = true,
 		["Rotmaw"] = true, --Black Morass
 		["Antnormi"] = true,
 		["Mossheart"] = true,

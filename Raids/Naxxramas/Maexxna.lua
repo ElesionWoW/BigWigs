@@ -1,6 +1,6 @@
 local module, L = BigWigs:ModuleDeclaration("Maexxna", "Naxxramas")
 
-module.revision = 30071
+module.revision = 30135
 module.enabletrigger = module.translatedName
 module.toggleoptions = { "cocoon", "webspray", "poison", "enrage", "spiderlings", "bosskill" }
 
@@ -32,7 +32,8 @@ L:RegisterTranslations("enUS", function()
 		trigger_cocoonGain = "(.+) is afflicted by Web Wrap.", --CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE // CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE
 		trigger_cocoonGainYou = "You are afflicted by Web Wrap.", --CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE
 		trigger_cocoonFade = "Web Wrap fades from (.+).", --CHAT_MSG_SPELL_AURA_GONE_OTHER // CHAT_MSG_SPELL_AURA_GONE_PARTY // CHAT_MSG_SPELL_AURA_GONE_SELF
-		bar_cocoonGain = "Cocoon ",
+		trigger_friendlyDeath = "(.+) dies.",
+		bar_cocoonGain = "Cocoon %s",
 		bar_cocoonCD = "Cocoon CD",
 
 		trigger_webSprayGain = "afflicted by Web Spray.", --CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE // CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE // CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE
@@ -108,9 +109,6 @@ function module:OnEnable()
 
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_CREATURE_BUFFS", "Event") --trigger_enrageGain
 
-
-	self:ThrottleSync(0, syncName.cocoon)
-	self:ThrottleSync(0, syncName.cocoonFade)
 	self:ThrottleSync(8, syncName.webspray)
 	self:ThrottleSync(8, syncName.websprayFade)
 	self:ThrottleSync(2, syncName.poison)
@@ -159,13 +157,13 @@ end
 function module:Event(msg)
 	if string.find(msg, L["trigger_cocoonGain"]) then
 		local _, _, cocoonedPlayer, _ = string.find(msg, L["trigger_cocoonGain"])
-		self:Sync(syncName.cocoon .. " " .. cocoonedPlayer)
+		self:Sync(syncName.cocoon .. cocoonedPlayer) -- bake player into sync name to throttle per player
 	elseif msg == L["trigger_cocoonGainYou"] then
 		cocoonedPlayer = UnitName("Player")
-		self:Sync(syncName.cocoon .. " " .. cocoonedPlayer)
+		self:Sync(syncName.cocoon .. cocoonedPlayer)
 	elseif string.find(msg, L["trigger_cocoonFade"]) then
 		local _, _, cocoonedPlayerFade, _ = string.find(msg, L["trigger_cocoonFade"])
-		self:Sync(syncName.cocoonFade .. " " .. cocoonedPlayerFade)
+		self:Sync(syncName.cocoonFade .. cocoonedPlayerFade)
 
 
 	elseif string.find(msg, L["trigger_webSprayGain"]) then
@@ -183,12 +181,26 @@ function module:Event(msg)
 	end
 end
 
+function module:OnFriendlyDeath(msg)
+	local _, _, deadPlayer, _ = string.find(msg, L["trigger_friendlyDeath"])
+	if deadPlayer then
+		self:Sync(syncName.cocoonFade .. cocoonedPlayerFade)
+	end
+end
+
 function module:BigWigs_RecvSync(sync, rest)
-	if sync == syncName.cocoon and rest and self.db.profile.cocoon then
-		self:Cocoon(rest)
-	elseif sync == syncName.cocoonFade and rest and self.db.profile.cocoon then
-		self:CocoonFade(rest)
-	elseif sync == syncName.webspray and self.db.profile.webspray then
+	local _, _, cocoonPlayer = string.find(sync, syncName.cocoon .. "(.+)")
+	if cocoonPlayer and self.db.profile.cocoon then
+		self:Cocoon(cocoonPlayer)
+		return
+	end
+	local _, _, cocoonPlayer = string.find(sync, syncName.cocoonFade .. "(.+)")
+	if cocoonPlayer and self.db.profile.cocoon then
+		self:CocoonFade(cocoonPlayer)
+		return
+	end
+	
+	if sync == syncName.webspray and self.db.profile.webspray then
 		self:Webspray()
 	elseif sync == syncName.websprayFade then
 		self:WebsprayFade()
@@ -203,13 +215,13 @@ function module:BigWigs_RecvSync(sync, rest)
 	end
 end
 
-function module:Cocoon(rest)
+function module:Cocoon(player)
 	self:RemoveBar(L["bar_cocoonCD"])
-	self:Bar(L["bar_cocoonGain"] .. rest, timer.cocoonDuration, icon.cocoon, true, color.cocoon)
+	self:MonitorBar(string.format(L["bar_cocoonGain"], player), icon.cocoon, BigWigs:GetGUIDByName(player, 0))
 end
 
-function module:CocoonFade(rest)
-	self:RemoveBar(L["bar_cocoonGain"] .. rest)
+function module:CocoonFade(player)
+	self:RemoveBar(string.format(L["bar_cocoonGain"], player))
 end
 
 function module:Webspray()

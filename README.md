@@ -8,7 +8,7 @@ Updates are summarized in the [changelog](https://github.com/ElesionWoW/BigWigs/
 * Incantagos - target Affinities automatically or by clicking on the timer bar, Surge of Mana victim bars, Blizzard warning
 * Anomalus - Floor Zone warnings
 * Echo - additional warnings, optional timers to align Resto Pot usage
-* Chess - accurate cast bars (hide, SBV), Curse CD (to allign hide phases), MC announcements, hide pre-warning (HP based)
+* Chess - accurate cast bars (hide, SBV), Curse CD (to allign hide phases), MC announcements, hide pre-warning (HP based), Void Zone damage alerts
 * Sanv - bar for add phase duration, warn about last Curse before Feedback
 * Rupturan - Boulder target warnings, P1 kill window, alert when you stand in fire, monitoring of Felheart mana, Fragment health bars
 * Mephistroth - Doom bar, purge alert, better Shards handling, sound cue on Shackle fade
@@ -90,6 +90,7 @@ Relative to pepopo978's BigWigs.
 * "Dark Subservience on You" will also give a pre-warning based on Queen starting to cast, even if cast warnings are disabled.
 * Added audio feedback on King's Fury end and successful /bow.
 * Added Queen's Fury magnitude alerts showing stack count and rough tick damage (default: off).
+* Added personal alerts when taking Void Zone damage (default: on).
 ### Sanv Tas'dal
 * Added alerts for Portal Opening and Enrage (always on).
 * Added timer bar for add phase (default: on).

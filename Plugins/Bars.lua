@@ -890,10 +890,13 @@ function BigWigsBars:BigWigs_StartMonitorBar(module, barName, icon, guid, type, 
 			monitorBarCache[i][3] = type
 			monitorBarCache[i][4] = displayText
 			monitorBarCache[i][5] = insertMark
+			-- vary endtime to guarantee stable sorting of bars created at the same time
+			candybar.var.handlers[id].endtime = candybar.var.handlers[id].endtime - 1 + i/10
 		end
 	end
 	if not barExists then
 		table.insert(monitorBarCache, { id, guid, type, displayText, insertMark })
+		candybar.var.handlers[id].endtime = candybar.var.handlers[id].endtime - 1 + table.getn(monitorBarCache)/10
 	end
 
 	BigWigsBars:UpdateAllMonitorBars()

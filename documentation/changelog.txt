@@ -2,6 +2,12 @@
 Changelog for BigWigs - Golden Edition
 --------------------------------------
 
+Bar Sorting Hotfix - 2026-03-18 (Golden 30137)
+------------------
+(Bars) MonitorBar - stable sorting of bars (no more random reordering)
+(K40) Chess - alerts on every Void Zone tick you take
+
+
 March Update - 2026-03-16 (Golden 30136)
 ------------
 (AQ40) C'Thun - improved map coordinates (by DCV-2142), fixed rounding for tentacle HP announcement

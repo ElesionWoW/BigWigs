@@ -3,7 +3,7 @@ local module, L = BigWigs:ModuleDeclaration("King", "Karazhan")
 -- module variables
 module.revision = 30004
 module.enabletrigger = module.translatedName
-module.toggleoptions = { "lowhealth", "kingsfury", "kingscursecd", "voidzone", -1, "subservienceyou", "subservienceothers", "subserviencecast", "marksubservience", "decursebow", "throttlebow", "charmingpresence", "announcemindcontrol", "monitormindcontrol", "markmindcontrol", "queensfury", -1, "shieldbashbar", "knightsglory", "bishoptonguesalert", "bishopvolley", "empoweredsb", -1, "printchess", "bosskill" }
+module.toggleoptions = { "lowhealth", "kingsfury", "kingscursecd", "voidzone", "voidzonedamage", -1, "subservienceyou", "subservienceothers", "subserviencecast", "marksubservience", "decursebow", "throttlebow", "charmingpresence", "announcemindcontrol", "monitormindcontrol", "markmindcontrol", "queensfury", -1, "shieldbashbar", "knightsglory", "bishoptonguesalert", "bishopvolley", "empoweredsb", -1, "printchess", "bosskill" }
 module.zonename = {
 	AceLibrary("AceLocale-2.2"):new("BigWigs")["Tower of Karazhan"],
 	AceLibrary("Babble-Zone-2.2")["Tower of Karazhan"],
@@ -19,6 +19,7 @@ module.defaultDB = {
 	kingsfury = true,
 	kingscursecd = true,
 	voidzone = true,
+	voidzonedamage = true,
 	subservienceyou = true,
 	subservienceothers = false,
 	subserviencecast = playerClass == "SHAMAN",
@@ -56,8 +57,12 @@ L:RegisterTranslations("enUS", function()
 		kingscursecd_desc = "Shows a timer bar about the earliest possible King's Curse (41-50s)",
 
 		voidzone_cmd = "voidzone",
-		voidzone_name = "Void Zone Alert",
-		voidzone_desc = "Warns when King casts Blunder (Void Zone)",
+		voidzone_name = "Void Zone Cast Alert",
+		voidzone_desc = "Warns the target when King casts Blunder (Void Zone) and makes them announce to /say",
+
+		voidzonedamage_cmd = "voidzonedamage",
+		voidzonedamage_name = "Void Zone Damage Alert",
+		voidzonedamage_desc = "Warns when you take damage from Void Zones (Consumption)",
 
 		subservienceyou_cmd = "subservienceyou",
 		subservienceyou_name = "Dark Subservience on You",
@@ -129,7 +134,8 @@ L:RegisterTranslations("enUS", function()
 
 
 		trigger_kingCastFury = "King begins to cast King(.+)Fury", -- they used special character apostrophe for this and queen's Fury
-		trigger_voidzone = "King casts Blunder.",
+		trigger_voidzone = "King casts Blunder.",		
+		trigger_voidzoneDamage = "Consumption hits you for",
 
 		trigger_subservienceYou = "You are afflicted by Dark Subservience",
 		trigger_subservienceOther = "(.+) is afflicted by Dark Subservience",
@@ -160,6 +166,7 @@ L:RegisterTranslations("enUS", function()
 		msg_kingCastFuryFast = "Hasted King's Fury! - HIDE",
 		msg_kingFurySafe = "Safe!",
 		msg_voidzone = "Void Zone MOVE!",
+		say_voidzone = "Void Zone On Me!",
 
 		msg_subservienceYou = "YOU need Bow to the Queen!",
 		msg_subservienceOther = "%s needs to go Bow!",
@@ -267,6 +274,7 @@ local bishopHasTongues = 0
 local bishopHasGlory = 0
 local kingHasGlory = 0
 local scanTargets = {}
+local lastVoidzoneSound = 0
 
 local baseChatFrameOnEvent = ChatFrame_OnEvent
 
@@ -414,7 +422,9 @@ function module:SpellEvent(msg)
 	elseif string.find(msg, L["trigger_bishopVolleyCast"]) then
 		self:Sync(syncName.sbvolleyCast)
 	elseif self.db.profile.empoweredsb and string.find(msg, L["trigger_empoweredCast"]) then
-		self:Message(L["msg_empoweredCast"], "Urgent", nil, "Info")		
+		self:Message(L["msg_empoweredCast"], "Urgent", nil, "Info")
+	elseif self.db.profile.voidzonedamage and string.find(msg, L["trigger_voidzoneDamage"]) then
+		self:VoidZoneAlert()
 	end
 	if self.db.profile.printchess then
 		local _,_,player,amount = string.find(msg, L["trigger_kingsFuryHit"])
@@ -573,7 +583,7 @@ function module:BigWigs_RecvSync(sync, rest, nick)
 	elseif sync == syncName.bishopNoCurse then
 		self:BishopNeedsCurseOfTongues()
 	elseif sync == syncName.voidzone and rest then
-		self:VoidZoneAlert(rest)
+		self:VoidZoneCast(rest)
 	elseif sync == syncName.kingGloryGain then
 		kingHasGlory = 1
 		if self.db.profile.knightsglory then
@@ -708,15 +718,25 @@ function module:KingCastFury()
 	self:DelayedMessage(castTime+0.2, L["msg_kingFurySafe"], "Positive", nil, "Long")
 end
 
-function module:VoidZoneAlert(player)
+function module:VoidZoneCast(player)
 	if not self.db.profile.voidzone then
 		return
 	end
 
 	if player == UnitName("player") then
-		self:Message(L["msg_voidzone"], "Important", true, "VoidZoneMove")
-		self:WarningSign(icon.voidzone, timer.voidzone, true, L["msg_voidzone"])
-		SendChatMessage("Void Zone On Me!", "SAY")
+		self:VoidZoneAlert()
+		SendChatMessage(L["say_voidzone"], "SAY")
+	end
+end
+
+function module:VoidZoneAlert()
+	self:Message(L["msg_voidzone"], "Important", true, false)
+	self:WarningSign(icon.voidzone, timer.voidzone, true, L["msg_voidzone"])
+	if GetTime() > lastVoidzoneSound + 5 then
+		self:Sound("VoidZoneMove")
+		lastVoidzoneSound = GetTime()
+	else
+		self:Sound("Info")
 	end
 end
 
@@ -803,7 +823,6 @@ end
 
 function module:Test()
 	-- Initialize module state
-	self:OnSetup()
 	self:Engage()
 
 	-- Store original player name
@@ -964,7 +983,7 @@ function module:Test()
 			print("Test: " .. msg)
 		end },
 
-		-- Add to the events table inside the Test function
+		-- Bishop Scan
 		{ time = 33, func = function()
 			print("Test: Scanning Bishop")
 			local originalGuid = guid.bishop
@@ -1052,7 +1071,7 @@ function module:Test()
 			print("Test: " .. msg)
 		end },
 
-		-- Add to the events table inside the Test function
+		-- Void Zone cast on you
 		{ time = 43, func = function()
 			print("Test: King casts Void Zone (Blunder) on player")
 			-- Simulate KingCastEvent with current player as target
@@ -1068,23 +1087,46 @@ function module:Test()
 			print("Test: " .. msg)
 		end },
 
+		-- Void Zone ticks
+		{ time = 45, func = function()
+			local msg = "Void Zone's Consumption hits you for 950 Shadow damage. (950 resisted)"
+			self:TriggerEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE", msg)
+			print("Test: " .. msg)
+		end },
+		{ time = 46, func = function()
+			local msg = "Void Zone's Consumption hits you for 1900 Shadow damage."
+			self:TriggerEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE", msg)
+			print("Test: " .. msg)
+		end },
+
 		-- Second Shield Bash (11s after first)
 		{ time = 48, func = function()
 			print("Test: Rook casts Shield Bash")
 			module:ShieldBash()
 		end },
 
-		-- Add to the events table inside the Test function
+		-- Void Zone cast on someone else
 		{ time = 52, func = function()
 			print("Test: King casts Void Zone (Blunder) on raid1")
-			-- Simulate KingCastEvent with current player as target
 			local _, playerGuid = UnitExists("raid1")
 			local kingGuid = "king"
 			module:KingCastEvent(kingGuid, playerGuid, "CAST", spellIds.blunder, 0)
 		end },
 
-		-- Test disengage
+		-- Void Zone ticks
+		{ time = 54, func = function()
+			local msg = "Void Zone's Consumption hits you for 0 Shadow damage. (1862 absorbed)"
+			self:TriggerEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE", msg)
+			print("Test: " .. msg)
+		end },
 		{ time = 55, func = function()
+			local msg = "Void Zone's Consumption hits you for 1900 Shadow damage."
+			self:TriggerEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE", msg)
+			print("Test: " .. msg)
+		end },
+
+		-- Test disengage
+		{ time = 58, func = function()
 			print("Test: Disengage")
 			BigWigs:DisableModule("King")
 		end },
@@ -1100,4 +1142,4 @@ function module:Test()
 end
 
 -- Test command:
--- /run local m=BigWigs:GetModule("King"); BigWigs:SetupModule("King");m:Test();
+-- /run BigWigs:GetModule("King"):Test();

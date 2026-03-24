@@ -6,6 +6,8 @@ module.revision = 30085
 module.enabletrigger = {"Razorgore the Untamed", "Grethok the Controller"}
 module.toggleoptions = {"polymorph", "dominatemind", "icon", "slow", -1, "phase", "eggs", "orb", "mindexhaustion", -1, "volley", "conflagration", "warstomp", "bosskill"}
 
+local eggsTotal = 20
+
 L:RegisterTranslations("enUS", function() return {
 	cmd = "Razorgore",
 
@@ -93,7 +95,7 @@ L:RegisterTranslations("enUS", function() return {
 	
 		--check for eggCast, if no re-cast or mindExhaustionFade within 3sec -> destroyed
 	bar_eggsCounter = "Eggs Left",
-	msg_eggCounter = "/30 Eggs Destroyed",
+	msg_eggCounter = "/"..eggsTotal.." Eggs Destroyed",
 	
 	trigger_mindExhaustionYou = "You are afflicted by Mind Exhaustion.", --CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE
 	trigger_mindExhaustionOther = "(.+) is afflicted by Mind Exhaustion.", --CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE // CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE
@@ -297,7 +299,7 @@ function module:OnEngage()
 	addDead = 0
 	
 	if self.db.profile.eggs then
-		self:TriggerEvent("BigWigs_StartCounterBar", self, L["bar_eggsCounter"], 30, "Interface\\Icons\\"..icon.egg, true, color.eggBar)
+		self:TriggerEvent("BigWigs_StartCounterBar", self, L["bar_eggsCounter"], eggsTotal, "Interface\\Icons\\"..icon.egg, true, color.eggBar)
 		self:TriggerEvent("BigWigs_SetCounterBar", self, L["bar_eggsCounter"], eggsDestroyed)
 	end
 	self:ScheduleRepeatingEvent("Razorgore_OrbControlCheck", self.OrbControlCheck, 0.5, self)

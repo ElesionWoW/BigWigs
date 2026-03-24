@@ -1,8 +1,8 @@
 ## Interface: 11200
 
-## X-Revision: 30137
+## X-Revision: 30138
 ## X-Fork: Golden
-## Title: |cFFEDD516Golden|r Big Wigs |cff7fff7f30137|r |cffabd473Turtle-WoW|r
+## Title: |cFFEDD516Golden|r Big Wigs |cff7fff7f30138|r |cffabd473Turtle-WoW|r
 ## Title-zhCN: |cffabd473Turtle-WoW|r Big Wigs
 ## Notes: Boss Mods with Timer bars.
 ## Notes-esES: Módulos para Jefes con barras temporizadoras.
@@ -136,6 +136,7 @@ Raids\AQ40\Brainwasher.lua
 
 Raids\BWL\Chromaggus.lua
 Raids\BWL\Ebonroc.lua
+Raids\BWL\Ezzel.lua
 Raids\BWL\Firemaw.lua
 Raids\BWL\Flamegor.lua
 Raids\BWL\Nefarian.lua

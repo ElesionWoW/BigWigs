@@ -74,6 +74,7 @@ BabbleZone:RegisterTranslations("enUS", function()
 		["The Upper Necropolis"] = true,
 		["Thorn Gorge"] = true, --1.18.1 battleground
 		["Timbermaw Hold"] = true, --1.18.1
+		["Timbermaw Tunnels"] = true, --1.18.1
 		["Tower of Karazhan"] = true,
 		["Windhorn Canyon"] = true, --1.18.1
 		["Winter Veil Vale"] = true,

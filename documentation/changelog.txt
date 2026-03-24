@@ -2,6 +2,16 @@
 Changelog for BigWigs - Golden Edition
 --------------------------------------
 
+BWL Update 1 - 2026-03-24 (Golden 30138)
+------------
+(BWL) Razorgore - fixed egg count
+(BWL) Broodlord - added Serrated Wound mechanic, Mortal Strike click-to-target
+(BWL) Flamegor - added Overbearing Rage mechanic
+(BWL) Nefarian - fix class calls, other improvements
+(BWL) Ezzel - new module with Charge, Acid Bomb, Transmute to Gold mechanics
+(Lib) Babble-Zone - added Timbermaw Tunnels
+
+
 Bar Sorting Hotfix - 2026-03-18 (Golden 30137)
 ------------------
 (Bars) MonitorBar - stable sorting of bars (no more random reordering)

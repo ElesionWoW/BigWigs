@@ -1,7 +1,7 @@
 
 local module, L = BigWigs:ModuleDeclaration("Ancient Core Hound", "Molten Core")
 
-module.revision = 30073
+module.revision = 30074
 module.enabletrigger = module.translatedName
 module.toggleoptions = {"bars"}
 
@@ -123,8 +123,6 @@ end
 
 
 function module:Debuff(rest)
-    print(rest)
-
 	self:RemoveBar(L["bar_debuff"])
 
 	if rest == L["s_ancientdread"] then

@@ -117,7 +117,11 @@ end
 function module:OnSetup()
 end
 
-function module:OnEngage()	
+function module:OnEngage()
+	if self.core:IsModuleActive("Blackwing Alchemist", "Blackwing Lair") then
+		self.core:DisableModule("Blackwing Alchemist", "Blackwing Lair")
+	end
+
 	nextHealthThreshold = 80
 	-- Start health monitoring
 	self:ScheduleRepeatingEvent("CheckBossHealth", self.CheckBossHealth, 0.5, self)

@@ -235,6 +235,7 @@ local eggsDestroyed = 0
 local orbController = nil
 local destroyEggTime = 0
 local addDead = 0
+local exhaustedMinds = {}
 
 function module:OnEnable()
 	--self:RegisterEvent("CHAT_MSG_SAY", "Event") --Debug
@@ -297,6 +298,7 @@ function module:OnEngage()
 	orbController = nil
 	destroyEggTime = 0
 	addDead = 0
+	exhaustedMinds = {}
 	
 	if self.db.profile.eggs then
 		self:TriggerEvent("BigWigs_StartCounterBar", self, L["bar_eggsCounter"], eggsTotal, "Interface\\Icons\\"..icon.egg, true, color.eggBar)
@@ -570,6 +572,7 @@ end
 
 function module:MindExhaustion(rest)
 	self:Bar(rest..L["bar_mindExhaustion"], timer.mindExhaustion, icon.mindExhaustion, true, color.mindExhaustion)
+	table.insert(exhaustedMinds, rest)
 	
 	--can cast volley in p1, volley stops on orb control
 	self:RemoveBar(L["bar_volleyCast"])
@@ -588,6 +591,12 @@ function module:MindExhaustion(rest)
 end
 function module:MindExhaustionFade(rest)
 	self:RemoveBar(rest..L["bar_mindExhaustion"])
+	for i=1,table.getn(exhaustedMinds) do
+		if exhaustedMinds[i] == rest then
+			table.remove(exhaustedMinds, i)
+			break
+		end
+	end
 end
 
 function module:DestroyEggCast()
@@ -611,9 +620,18 @@ function module:Phase3()
 	phase = "phase3"
 	
 	self:CancelScheduledEvent("Razorgore_OrbControlCheck")
+	if orbController then
+		self:RemoveBar(orbController..L["bar_orb"])
+	end
+	for i=1,table.getn(exhaustedMinds) do
+		self:RemoveBar(exhaustedMinds[i]..L["bar_mindExhaustion"])
+	end
+	exhaustedMinds = {}
 	
 	self:CancelScheduledEvent("Razorgore_DestroyEgg")
 	self:TriggerEvent("BigWigs_StopCounterBar", self, L["bar_eggsCounter"])
+	self:CancelDelayedBar(L["bar_destroyEggCd"])
+	self:RemoveBar(L["bar_destroyEggCd"])
 	
 	if self.db.profile.phase then
 		self:Message(L["msg_phase3"], "Important", false, nil, false)

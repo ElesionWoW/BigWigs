@@ -4,10 +4,9 @@ modulePrototype API
 -------------------
 
 module:OnEnable() -- called once when any module is enabled
-module:OnSetup() -- called when a boss module (not trash) is enabled or rebooted
+module:OnSetup() -- called when a module is enabled or rebooted
 module:OnEngage() -- called on every fight start
-module:OnDisengage() -- called on reboot or disable
--- boss modules only: wipes trigger a reboot, victories trigger a disable
+module:OnDisengage() -- called on reboot (eg wipe) or disable (eg victory)
 
 module:SendEngageSync()
 module:SendBossDeathSync()

@@ -611,9 +611,15 @@ function module:Phase3()
 	phase = "phase3"
 	
 	self:CancelScheduledEvent("Razorgore_OrbControlCheck")
+	if orbController then
+		self:RemoveBar(orbController..L["bar_orb"])
+		self:RemoveBar(orbController..L["bar_mindExhaustion"])
+	end
 	
 	self:CancelScheduledEvent("Razorgore_DestroyEgg")
 	self:TriggerEvent("BigWigs_StopCounterBar", self, L["bar_eggsCounter"])
+	self:CancelDelayedBar(L["bar_destroyEggCd"])
+	self:RemoveBar(L["bar_destroyEggCd"])
 	
 	if self.db.profile.phase then
 		self:Message(L["msg_phase3"], "Important", false, nil, false)

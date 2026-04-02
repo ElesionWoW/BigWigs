@@ -42,10 +42,11 @@ L:RegisterTranslations("enUS", function() return {
 	msg_wingBuffetCast = "Casting Wing Buffet!",
 	msg_wingBuffetSoon = "Wing Buffet in 2 seconds - Taunt now!",
 	
-	trigger_shadowFlame = "Flamegor begins to cast Shadow Flame.", --CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE
+	trigger_shadowFlameCast = "Flamegor begins to cast Shadow Flame.", --CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE - seems to no longer appear in logs since 1.18
 	bar_shadowFlameCast = "Casting Shadow Flame!",
-	bar_shadowFlameCd = "Shadow Flame CD",
 	msg_shadowFlameCast = "Casting Shadow Flame!",
+	trigger_shadowFlameHit = "Flamegor's Shadow Flame hits", --CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE
+	bar_shadowFlameCd = "Shadow Flame CD",
 	
 	trigger_frenzy = "Flamegor gains Frenzy.", --CHAT_MSG_SPELL_PERIODIC_CREATURE_BUFFS
 	trigger_frenzyFade = "Frenzy fades from Flamegor.", --CHAT_MSG_SPELL_AURA_GONE_OTHER
@@ -94,11 +95,15 @@ local color = {
 }
 local syncName = {
 	wingBuffet = "FlamegorWingBuffet"..module.revision,
-	shadowFlame = "FlamegorShadowflame"..module.revision,
+	shadowFlameCast = "FlamegorShadowflame"..module.revision,
+	shadowFlameHit = "FlamegorShadowflameHit"..module.revision,
 	frenzy = "FlamegorFrenzyStart"..module.revision,
 	frenzyFade = "FlamegorFrenzyEnd"..module.revision,
 	mc = "FlamegorMC"..module.revision,
 	mcFade = "FlamegorMCFade"..module.revision,
+}
+local spellId = {
+	shadowFlame = 22539,
 }
 
 local frenzyStartTime = 0
@@ -109,7 +114,9 @@ function module:OnEnable()
 	
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_CREATURE_BUFFS", "Event") --trigger_frenzy
 	
-	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE", "Event") --trigger_wingBuffet, trigger_shadowFlame
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE", "Event") --trigger_shadowFlameHit
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_PARTY_DAMAGE", "Event") --trigger_shadowFlameHit
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE", "Event") --trigger_wingBuffet, trigger_shadowFlameCast, trigger_shadowFlameHit
 	
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", "AfflictionEvent") --trigger_mcYou
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_HOSTILEPLAYER_DAMAGE", "AfflictionEvent") --trigger_mcOther
@@ -118,9 +125,14 @@ function module:OnEnable()
 	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_PARTY", "FadesEvent")
 	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_OTHER", "FadesEvent")--trigger_frenzyFade
 	
+	if SUPERWOW_VERSION or SetAutoloot then
+		self:RegisterEvent("UNIT_CASTEVENT")
+	end
+	
 	
 	self:ThrottleSync(3, syncName.wingBuffet)
-	self:ThrottleSync(3, syncName.shadowFlame)
+	self:ThrottleSync(3, syncName.shadowFlameCast)
+	self:ThrottleSync(3, syncName.shadowFlameHit)
 	self:ThrottleSync(5, syncName.frenzy)
 	self:ThrottleSync(1, syncName.frenzyFade)
 	self:ThrottleSync(3, syncName.mc)
@@ -157,14 +169,16 @@ function module:Event(msg)
 	if msg == L["trigger_wingBuffet"] then
 		self:Sync(syncName.wingBuffet)
 	
-	elseif msg == L["trigger_shadowFlame"] then
-		self:Sync(syncName.shadowFlame)
+	elseif msg == L["trigger_shadowFlameCast"] then
+		self:Sync(syncName.shadowFlameCast)
+	
+	elseif string.find(msg, L["trigger_shadowFlameHit"]) then
+		self:Sync(syncName.shadowFlameHit)
 	
 	elseif msg == L["trigger_frenzy"] then
 		self:Sync(syncName.frenzy)
 	end
 end
-
 
 function module:AfflictionEvent(msg)
 	if string.find(msg, L["trigger_mcYou"]) then
@@ -181,7 +195,6 @@ function module:AfflictionEvent(msg)
 	end
 end
 
-
 function module:FadesEvent(msg)
 	if msg == L["trigger_frenzyFade"] then
 		self:Sync(syncName.mcFade)
@@ -194,7 +207,6 @@ function module:FadesEvent(msg)
 	end
 end
 
-
 function module:OnFriendlyDeath(msg)
 	local _, _, player = string.find(msg, L["trigger_death"])
 	if player then
@@ -203,12 +215,25 @@ function module:OnFriendlyDeath(msg)
 	end
 end
 
+function module:UNIT_CASTEVENT(caster,target,action,spell,castTime)
+	if spell == spellId.shadowFlame and action == "START" then
+		self:Sync(syncName.shadowFlameCast)
+		self:DelayedSync(castTime/1000, syncName.shadowFlameHit)
+		return
+	end
+end
+
 
 function module:BigWigs_RecvSync(sync, rest, nick)
 	if sync == syncName.wingBuffet and self.db.profile.wingbuffet then
 		self:WingBuffet()
-	elseif sync == syncName.shadowFlame and self.db.profile.shadowflame then
-		self:ShadowFlame()
+	elseif sync == syncName.shadowFlameCast and self.db.profile.shadowflame then
+		self:RemoveBar(L["bar_shadowFlameCd"])
+		self:Bar(L["bar_shadowFlameCast"], timer.shadowFlameCast, icon.shadowFlame, true, color.shadowFlameCast)
+		self:Message(L["msg_shadowFlameCast"], "Urgent", false, nil, false)
+	elseif sync == syncName.shadowFlameHit and self.db.profile.shadowflame then
+		self:RemoveBar(L["bar_shadowFlameCd"])
+		self:Bar(L["bar_shadowFlameCd"], timer.shadowFlameCd, icon.shadowFlame, true, color.shadowFlameCd)
 	elseif sync == syncName.frenzy and self.db.profile.frenzy then
 		self:Frenzy()
 	elseif sync == syncName.frenzyFade and self.db.profile.frenzy then
@@ -229,15 +254,6 @@ function module:WingBuffet()
 	
 	self:DelayedBar(timer.wingBuffetCast, L["bar_wingBuffetCd"], timer.wingBuffetCd, icon.wingBuffet, true, color.wingBuffetCd)
 	self:DelayedMessage(timer.wingBuffetCast + timer.wingBuffetCd - 2, L["msg_wingBuffetSoon"], "Attention", false, nil, false)
-end
-
-function module:ShadowFlame()
-	self:RemoveBar(L["bar_shadowFlameCd"])
-	
-	self:Bar(L["bar_shadowFlameCast"], timer.shadowFlameCast, icon.shadowFlame, true, color.shadowFlameCast)
-	self:Message(L["msg_shadowFlameCast"], "Urgent", false, nil, false)
-	
-	self:DelayedBar(timer.shadowFlameCast, L["bar_shadowFlameCd"], timer.shadowFlameCd, icon.shadowFlame, true, color.shadowFlameCd)
 end
 
 function module:Frenzy()

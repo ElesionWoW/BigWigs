@@ -2,6 +2,21 @@
 Changelog for BigWigs - Golden Edition
 --------------------------------------
 
+BWL Update 2 - 2026-04-02 (Golden 30139)
+------------
+(BWL) Razorgore - remove egg-related bars on phase transition
+(BWL) Firemaw - new floor zone mechanic, fixed Shadow Flame trigger
+(BWL) Ebonroc - added Spark reminder, fixed Shadow Flame trigger
+(BWL) Flamegor - fixed Shadow Flame trigger
+(BWL) Nefarian - more concise class calls, fixed Shadow Flame trigger
+(BWL) Ezzel - better cast bars, early warnings based on HP thresholds, tracking of active damage reduction
+(BWL) Blackwing Alchemist - new trash module for Alchemist's Fire
+
+(Mage Tools) - client mod detection fix (by Pepopo)
+(MC) Ancient Corehound - translation fix (by Pepopo)
+(BWL) Wyrmguard - vulnerability marks (by KameleonUK)
+
+
 BWL Update 1 - 2026-03-24 (Golden 30138)
 ------------
 (BWL) Razorgore - fixed egg count

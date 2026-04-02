@@ -144,6 +144,7 @@ Raids\BWL\Vaelastrasz.lua
 Raids\BWL\Broodlord.lua
 Raids\BWL\Razorgore.lua
 Raids\BWL\Wyrmguards.lua
+Raids\BWL\Alchemists.lua
 
 Raids\MC\Lucifron.lua
 Raids\MC\BaronGeddon.lua

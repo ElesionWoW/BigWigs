@@ -3,7 +3,7 @@ local module, L = BigWigs:ModuleDeclaration("Ebonroc", "Blackwing Lair")
 
 module.revision = 30085
 module.enabletrigger = module.translatedName
-module.toggleoptions = {"wingbuffet", "shadowflame", "curse", "bosskill"}
+module.toggleoptions = {"wingbuffet", "shadowflame", "curse", "sparks", "bosskill"}
 
 L:RegisterTranslations("enUS", function() return {
 	cmd = "Ebonroc",
@@ -19,6 +19,10 @@ L:RegisterTranslations("enUS", function() return {
 	curse_cmd = "curse",
 	curse_name = "Shadow of Ebonroc Alert",
 	curse_desc = "Warn for Shadow of Ebonroc",
+
+	sparks_cmd = "sparks",
+	sparks_name = "Shadowflame Spark Reminder",
+	sparks_desc = "Reminds about the mechanic when Spaks first spawn",
 	
 	
 	trigger_wingBuffet = "Ebonroc begins to cast Wing Buffet.", --CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE
@@ -27,10 +31,11 @@ L:RegisterTranslations("enUS", function() return {
 	msg_wingBuffetCast = "Casting Wing Buffet!",
 	msg_wingBuffetSoon = "Wing Buffet in 2 seconds - Taunt now!",
 	
-	trigger_shadowFlame = "Ebonroc begins to cast Shadow Flame.", --CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE
+	trigger_shadowFlameCast = "Ebonroc begins to cast Shadow Flame.", --CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE - seems to no longer appear in logs since 1.18
 	bar_shadowFlameCast = "Casting Shadow Flame!",
-	bar_shadowFlameCd = "Shadow Flame CD",
 	msg_shadowFlameCast = "Casting Shadow Flame!",
+	trigger_shadowFlameHit = "Ebonroc's Shadow Flame hits", --CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE
+	bar_shadowFlameCd = "Shadow Flame CD",
 	
 	trigger_shadowOfEbonrocYou = "You are afflicted by Shadow of Ebonroc.", --CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE
 	trigger_shadowOfEbonrocOther = "(.+) is afflicted by Shadow of Ebonroc.", --CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE // CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE
@@ -38,6 +43,8 @@ L:RegisterTranslations("enUS", function() return {
 	msg_shadowOfEbonroc = " has Shadow of Ebonroc - Taunt!",
 	bar_shadowOfEbonrocDur = " Shadow of Ebonroc",
 	bar_shadowOfEbonrocCd = "Shadow of Ebonroc CD",
+	
+	msg_sparks = "Healers outrange Sparks until they despawn!",
 } end)
 
 local timer = {
@@ -69,15 +76,23 @@ local color = {
 }
 local syncName = {
 	wingBuffet = "EbonrocWingBuffet"..module.revision,
-	shadowFlame = "EbonrocShadowflame"..module.revision,
+	shadowFlameCast = "EbonrocShadowflame"..module.revision,
+	shadowFlameHit = "EbonrocShadowflameHit"..module.revision,
 	shadowOfEbonroc = "EbonrocShadow"..module.revision,
 	shadowOfEbonrocFade = "EbonrocShadowFade"..module.revision,
 }
+local spellId = {
+	shadowFlame = 22539,
+}
+
+local sparksWarned = nil
 
 function module:OnEnable()
 	--self:RegisterEvent("CHAT_MSG_SAY", "Event") --Debug
 	
-	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE", "Event") --trigger_wingBuffet, trigger_shadowFlame
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE", "Event") --trigger_shadowFlameHit
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_PARTY_DAMAGE", "Event") --trigger_shadowFlameHit
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE", "Event") --trigger_wingBuffet, trigger_shadowFlameCast, trigger_shadowFlameHit
 	
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", "Event") --trigger_shadowOfEbonrocYou
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE", "Event") --trigger_shadowOfEbonrocOther
@@ -87,9 +102,13 @@ function module:OnEnable()
 	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_PARTY", "Event") --trigger_shadowOfEbonrocFade
 	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_OTHER", "Event") --trigger_shadowOfEbonrocFade
 	
+	if SUPERWOW_VERSION or SetAutoloot then
+		self:RegisterEvent("UNIT_CASTEVENT")
+	end
 	
 	self:ThrottleSync(3, syncName.wingBuffet)
-	self:ThrottleSync(3, syncName.shadowFlame)
+	self:ThrottleSync(3, syncName.shadowFlameCast)
+	self:ThrottleSync(3, syncName.shadowFlameHit)
 	self:ThrottleSync(3, syncName.shadowOfEbonroc)
 	self:ThrottleSync(3, syncName.shadowOfEbonrocFade)
 end
@@ -102,6 +121,8 @@ function module:OnDisengage()
 end
 
 function module:OnEngage()
+	sparksWarned = nil
+	
 	if self.db.profile.wingbuffet then
 		self:Bar(L["bar_wingBuffetCd"], timer.wingBuffetFirstCd, icon.wingBuffet, true, color.wingBuffetCd)
 		self:DelayedMessage(timer.wingBuffetFirstCd - 2, L["msg_wingBuffetSoon"], "Attention", false, nil, false)
@@ -120,8 +141,11 @@ function module:Event(msg)
 	if msg == L["trigger_wingBuffet"] then
 		self:Sync(syncName.wingBuffet)
 	
-	elseif msg == L["trigger_shadowFlame"] then
-		self:Sync(syncName.shadowFlame)
+	elseif msg == L["trigger_shadowFlameCast"] then
+		self:Sync(syncName.shadowFlameCast)
+	
+	elseif string.find(msg, L["trigger_shadowFlameHit"]) then
+		self:Sync(syncName.shadowFlameHit)
 	
 	elseif msg == L["trigger_shadowOfEbonrocYou"] then
 		self:Sync(syncName.shadowOfEbonroc .. " " .. UnitName("Player"))
@@ -137,12 +161,24 @@ function module:Event(msg)
 	end
 end
 
+function module:UNIT_CASTEVENT(caster,target,action,spell,castTime)
+	if spell == spellId.shadowFlame and action == "START" then
+		self:Sync(syncName.shadowFlameCast)
+		self:DelayedSync(castTime/1000, syncName.shadowFlameHit)
+		return
+	end
+end
+
 
 function module:BigWigs_RecvSync(sync, rest, nick)
 	if sync == syncName.wingBuffet and self.db.profile.wingbuffet then
 		self:WingBuffet()
-	elseif sync == syncName.shadowFlame and self.db.profile.shadowflame then
-		self:ShadowFlame()
+	elseif sync == syncName.shadowFlameCast and self.db.profile.shadowflame then
+		self:RemoveBar(L["bar_shadowFlameCd"])
+		self:Bar(L["bar_shadowFlameCast"], timer.shadowFlameCast, icon.shadowFlame, true, color.shadowFlameCast)
+		self:Message(L["msg_shadowFlameCast"], "Urgent", false, nil, false)
+	elseif sync == syncName.shadowFlameHit then
+		self:ShadowFlameHit()
 	elseif sync == syncName.shadowOfEbonroc and rest and self.db.profile.curse then
 		self:ShadowOfEbonroc(rest)
 	elseif sync == syncName.shadowOfEbonrocFade and rest and self.db.profile.curse then
@@ -161,13 +197,16 @@ function module:WingBuffet()
 	self:DelayedMessage(timer.wingBuffetCast + timer.wingBuffetCd - 2, L["msg_wingBuffetSoon"], "Attention", false, nil, false)
 end
 
-function module:ShadowFlame()
-	self:RemoveBar(L["bar_shadowFlameCd"])
-	
-	self:Bar(L["bar_shadowFlameCast"], timer.shadowFlameCast, icon.shadowFlame, true, color.shadowFlameCast)
-	self:Message(L["msg_shadowFlameCast"], "Urgent", false, nil, false)
-	
-	self:DelayedBar(timer.shadowFlameCast, L["bar_shadowFlameCd"], timer.shadowFlameCd, icon.shadowFlame, true, color.shadowFlameCd)
+function module:ShadowFlameHit()
+	if self.db.profile.shadowflame then
+		self:RemoveBar(L["bar_shadowFlameCd"])
+
+		self:Bar(L["bar_shadowFlameCd"], timer.shadowFlameCd, icon.shadowFlame, true, color.shadowFlameCd)
+	end
+	if self.db.profile.sparks and not sparksWarned then
+		self:Message(L["msg_sparks"], "Attention")
+		sparksWarned = true
+	end
 end
 
 function module:ShadowOfEbonroc(rest)

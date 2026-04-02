@@ -122,10 +122,11 @@ L:RegisterTranslations("enUS", function() return {
 	--ShadowFlame 12.5sec after landingStart, lands 0.5-1sec after
 	trigger_landingNow = "BURN! You wretches! BURN!", --CHAT_MSG_MONSTER_YELL 22:14:23.782
 	
-	trigger_shadowFlame = "Nefarian begins to cast Shadow Flame.", --CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE
-	bar_shadowFlameCd = "Shadow Flame CD",
+	trigger_shadowFlameCast = "Nefarian begins to cast Shadow Flame.", --CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE - seems to no longer appear in logs since 1.18
 	bar_shadowFlameCast = "Casting Shadow Flame",
 	msg_shadowFlameCast = "Casting Shadow Flame!",
+	trigger_shadowFlameHit = "Nefarian's Shadow Flame hits", --CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE
+	bar_shadowFlameCd = "Shadow Flame CD",
 	
 	trigger_fear = "Nefarian begins to cast Bellowing Roar.", --CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE
 	bar_fearCd = "Fear CD",
@@ -169,15 +170,15 @@ L:RegisterTranslations("enUS", function() return {
 	WARLOCK = "Warlock",
 	WARRIOR = "Warrior",
 	
-	msg_classCall_DRUID = "Druid Class Call - Stuck in Cat Form!",
-	msg_classCall_HUNTER = "Hunter Class Call - All Weapons Broken!",
-	msg_classCall_MAGE = "Mage Class Call - Random Polymorph in LoS!",
-	msg_classCall_PALADIN = "Paladin Class Call - Harmful Blessings!",
-	msg_classCall_PRIEST = "Priest Class Call - Direct Heals Hurt - Use Renew / Shield only!",
-	msg_classCall_ROGUE = "Rogue Class Call - Rogues Teleported and Rooted!",
-	msg_classCall_SHAMAN = "Shaman Class Call - Kill Totems!",
-	msg_classCall_WARLOCK = "Warlock Class Call - Kill the Infernals!",
-	msg_classCall_WARRIOR = "Warrior Class Call - Stuck in Berserker Stance!",
+	msg_classCall_DRUID = "Druid Call - Stuck in Cat Form!",
+	msg_classCall_HUNTER = "Hunter Call - All Weapons Broken!",
+	msg_classCall_MAGE = "Mage Call - Random Polymorph in LoS!",
+	msg_classCall_PALADIN = "Paladin Call - Harmful Blessings!",
+	msg_classCall_PRIEST = "Priest Call - Direct Heals Hurt - Use Renew / Shield only!",
+	msg_classCall_ROGUE = "Rogue Call - Rogues Teleported and Rooted!",
+	msg_classCall_SHAMAN = "Shaman Call - Kill Totems!",
+	msg_classCall_WARLOCK = "Warlock Call - Kill the Infernals!",
+	msg_classCall_WARRIOR = "Warrior Call - Stuck in Berserker Stance!",
 	
 	msg_classCall_soon3 = "Class Call in 3 seconds",
 	
@@ -311,7 +312,8 @@ local syncName = {
 	landingStart = "NefarianLandingStart"..module.revision,
 	landingNow = "NefarianLandingNow2"..module.revision,
 
-	shadowFlame = "NefarianShadowflame"..module.revision,
+	shadowFlameCast = "NefarianShadowflame"..module.revision,
+	shadowFlameHit = "NefarianShadowflameHit"..module.revision,
 
 	fear = "NefarianFear"..module.revision,
 
@@ -329,6 +331,9 @@ local syncName = {
 	lowHp = "NefarianLowHp"..module.revision,
 
 	boneConstructs = "NefarianBoneConstructs"..module.revision,
+}
+local spellId = {
+	shadowFlame = 22539,
 }
 
 local drakonidsSelfCount = 0
@@ -362,8 +367,9 @@ function module:OnEnable()
 	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_PARTY", "Event") --trigger_mcFade, trigger_curseFade, trigger_wildPolymorphFade
 	self:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_OTHER", "Event") --trigger_mcFade, trigger_curseFade, trigger_wildPolymorphFade
 
-	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE", "Event") --trigger_tailLash
-	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE", "Event") --trigger_shadowFlame, trigger_fear
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE", "Event") --trigger_tailLash, trigger_shadowFlameHit
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_PARTY_DAMAGE", "Event") --trigger_shadowFlameHit
+	self:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_CREATURE_DAMAGE", "Event") --trigger_shadowFlameCast, trigger_fear, trigger_shadowFlameHit
 
 	self:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS", "Event") --trigger_fearWard
 
@@ -381,7 +387,8 @@ function module:OnEnable()
 	self:ThrottleSync(3, syncName.landingStart)
 	self:ThrottleSync(3, syncName.landingNow)
 
-	self:ThrottleSync(3, syncName.shadowFlame)
+	self:ThrottleSync(3, syncName.shadowFlameCast)
+	self:ThrottleSync(3, syncName.shadowFlameHit)
 
 	self:ThrottleSync(3, syncName.fear)
 
@@ -539,8 +546,11 @@ function module:Event(msg)
 		self:Sync(syncName.mcFade .. " " .. mcFadePlayer)
 
 
-	elseif msg == L["trigger_shadowFlame"] then
-		self:Sync(syncName.shadowFlame)
+	elseif msg == L["trigger_shadowFlameCast"] then
+		self:Sync(syncName.shadowFlameCast)
+	
+	elseif string.find(msg, L["trigger_shadowFlameHit"]) then
+		self:Sync(syncName.shadowFlameHit)
 
 	elseif msg == L["trigger_fear"] then
 		self:Sync(syncName.fear)
@@ -592,6 +602,14 @@ function module:Event(msg)
 	end
 end
 
+function module:UNIT_CASTEVENT(caster,target,action,spell,castTime)
+	if spell == spellId.shadowFlame and action == "START" then
+		self:Sync(syncName.shadowFlameCast)
+		self:DelayedSync(castTime/1000, syncName.shadowFlameHit)
+		return
+	end
+end
+
 
 function module:BigWigs_RecvSync(sync, rest, nick)
 --Phase 1
@@ -615,8 +633,13 @@ function module:BigWigs_RecvSync(sync, rest, nick)
 	elseif sync == syncName.landingNow then
 		self:LandingNow()
 
-	elseif sync == syncName.shadowFlame and self.db.profile.shadowflame then
-		self:ShadowFlame()
+	elseif sync == syncName.shadowFlameCast and self.db.profile.shadowflame then
+		self:RemoveBar(L["bar_shadowFlameCd"])
+		self:Bar(L["bar_shadowFlameCast"], timer.shadowFlameCast, icon.shadowFlame, true, color.shadowFlameCast)
+		self:Message(L["msg_shadowFlameCast"], "Urgent", false, nil, false)
+	elseif sync == syncName.shadowFlameHit and self.db.profile.shadowflame then
+		self:RemoveBar(L["bar_shadowFlameCd"])
+		self:IntervalBar(L["bar_shadowFlameCd"], timer.shadowFlameCd[1], timer.shadowFlameCd[2], icon.shadowFlame, true, color.shadowFlameCd)
 
 	elseif sync == syncName.fear and self.db.profile.fear then
 		self:Fear()
@@ -753,15 +776,6 @@ function module:LandingNow()
 		self:Bar(L["bar_classCallFirst"], timer.classCallFirstCd, icon.classCall, true, color.classCallCd)
 		self:DelayedMessage(timer.classCallFirstCd - 3, L["msg_classCall_soon3"], "Personal", false, nil, false)
 	end
-end
-
-function module:ShadowFlame()
-	self:RemoveBar(L["bar_shadowFlameCd"])
-
-	self:Bar(L["bar_shadowFlameCast"], timer.shadowFlameCast, icon.shadowFlame, true, color.shadowFlameCast)
-	self:Message(L["msg_shadowFlameCast"], "Urgent", false, nil, false)
-
-	self:DelayedIntervalBar(timer.shadowFlameCast, L["bar_shadowFlameCd"], timer.shadowFlameCd[1], timer.shadowFlameCd[2], icon.shadowFlame, true, color.shadowFlameCd)
 end
 
 function module:FearWard()

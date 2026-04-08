@@ -77,6 +77,7 @@ L:RegisterTranslations("enUS", function()
 		["Dire Maul"] = "DireMaul",
 		["Blackrock Spire"] = "BlackrockSpire",
 		["The Black Morass"] = "BlackMorass",
+		["Timbermaw Hold"] = "TMH",
 		["Silithus"] = true,
 		["Outdoor Raid Bosses"] = "Outdoor",
 		["Outdoor Raid Bosses Zone"] = "Outdoor Raid Bosses", -- DO NOT EVER TRANSLATE untill I find a more elegant option

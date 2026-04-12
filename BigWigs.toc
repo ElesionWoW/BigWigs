@@ -247,5 +247,17 @@ Raids\KarazhanUpper\Kruul.lua
 Raids\KarazhanUpper\Mephistroth.lua
 Raids\KarazhanUpper\KaraTrash.lua
 
+Raids\TMH\TimbermawTrash.lua
+Raids\TMH\Karrsh.lua
+Raids\TMH\Rotgrowl.lua
+Raids\TMH\Loktanag.lua
+Raids\TMH\Ormanos.lua
+Raids\TMH\Trioch.lua
+Raids\TMH\Partath.lua
+Raids\TMH\Kronn.lua
+Raids\TMH\Selenaxx.lua
+Raids\TMH\Ursol.lua
+Raids\TMH\Perotharn.lua
+
 Battlegrounds\AlteracValley.lua
 Battlegrounds\ArathiBasin.lua

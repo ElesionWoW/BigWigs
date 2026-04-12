@@ -2,6 +2,7 @@
 -------------------
 modulePrototype API
 -------------------
+module:RegisterYellEngage(yell)
 
 module:OnEnable() -- called once when any module is enabled
 module:OnSetup() -- called when a module is enabled or rebooted
@@ -35,6 +36,13 @@ module:DelayedClickBar(delay, text, time, icon, target, spell, otherColor, c1, c
 module:MonitorBar(barName, icon, guid, type, displayText, insertMark, emphazise, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
 module:DelayedMonitorBar(delay, barName, icon, guid, type, displayText, insertMark, emphazise, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
 
+module:CounterBar(barName, max, icon, target, spell, emphasize, timeFormat, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10) -- emphasize defaults to false, timeFormat defaults to "%d"; use module:UpdateBar() to update count
+module:DelayedCounterBar(delay, barName, max, icon, target, spell, emphasize, timeFormat, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
+
+-- Bar Utility Functions - all parameters except the first are optional, just nil what you don't need
+module:UpdateBar(barName, value, displayText, paused) -- value is a number (positive will set remaining time, negative will set elapsed time) used to update paused bars without impacting bar sorting; paused can be true or false
+module:SetBar(barName, timeLeft, timeTotal, timeFormat) -- timeLeft and timeTotal are numbers that will fully adjust bars (which can impact sorting) but leave emphasis events unaffected (recommended to only use on bars without scheduled emphasis - either set to false or start a short bar and then lengthen it using this); timeFormat must be a valid first parameter for string.format
+module:ColorBar(barName, color, bgcolor) -- use PaintChips names (see below)
 registered, time, elapsed, running = module:BarStatus(text)
 
 module:Sound(sound)

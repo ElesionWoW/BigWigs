@@ -10,7 +10,7 @@ Dependencies: AceLibrary, AceLocale-2.2
 ]]
 
 local MAJOR_VERSION = "Babble-Boss-2.2"
-local MINOR_VERSION = 20007
+local MINOR_VERSION = 20008
 
 if not AceLibrary then error(MAJOR_VERSION .. " requires AceLibrary") end
 
@@ -28,6 +28,18 @@ local BabbleBoss = AceLibrary("AceLocale-2.2"):new(MAJOR_VERSION)
 
 BabbleBoss:RegisterTranslations("enUS", function()
 	return {
+		["Karrsh the Sentinel"] = true, --Timbermaw Hold
+		["Rotgrowl"] = true,
+		["Kodiak"] = true,
+		["Loktanag the Vile"] = true,
+		["Ormanos the Cracked"] = true,
+		["Chieftain Partath"] = true,
+		["Archdruid Kronn"] = true,
+		["Dreamform of Kronn"] = true,
+		["Trioch the Devourer"] = true,
+		["Selenaxx Foulheart"] = true,
+		["Ursol"] = true,
+		["Peroth'arn"] = true,
 		["Ezzel Darkbrewer"] = true, --BWL extension
 		["Broodcommander Axelus"] = true, --Onyxia extension
 		["Smoldaris"] = true, --MC extension

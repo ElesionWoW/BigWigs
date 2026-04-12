@@ -184,7 +184,7 @@ end
 function module:OnFriendlyDeath(msg)
 	local _, _, deadPlayer, _ = string.find(msg, L["trigger_friendlyDeath"])
 	if deadPlayer then
-		self:Sync(syncName.cocoonFade .. cocoonedPlayerFade)
+		self:Sync(syncName.cocoonFade .. deadPlayer)
 	end
 end
 

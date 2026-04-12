@@ -73,6 +73,7 @@ L:RegisterTranslations("enUS", function()
 		["Emerald Sanctum"] = "EmeraldSanctum",
 		["Lower Karazhan Halls"] = "Karazhan10",
 		["Tower of Karazhan"] = "Karazhan40",
+		["Timbermaw Hold"] = "TimbermawHold",
 		["Dire Maul"] = "DireMaul",
 		["Blackrock Spire"] = "BlackrockSpire",
 		["The Black Morass"] = "BlackMorass",
@@ -1131,7 +1132,7 @@ function BigWigs:ModuleDeclaration(bossName, zoneName)
 
 
 	-- zone
-	local raidZones = { "Blackwing Lair", "Ruins of Ahn'Qiraj", "Ahn'Qiraj", "Molten Core", "Naxxramas", "Emerald Sanctum", "Zul'Gurub" }
+	local raidZones = { "Blackwing Lair", "Ruins of Ahn'Qiraj", "Ahn'Qiraj", "Molten Core", "Naxxramas", "Emerald Sanctum", "Zul'Gurub", "Timbermaw Hold" }
 	local isOutdoorraid = true
 	for i, value in ipairs(raidZones) do
 		if value == zoneName then

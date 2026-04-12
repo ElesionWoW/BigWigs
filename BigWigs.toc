@@ -1,8 +1,8 @@
 ## Interface: 11200
 
-## X-Revision: 30139
+## X-Revision: 30140
 ## X-Fork: Golden
-## Title: |cFFEDD516Golden|r Big Wigs |cff7fff7f30139|r |cffabd473Turtle-WoW|r
+## Title: |cFFEDD516Golden|r Big Wigs |cff7fff7f30140|r |cffabd473Turtle-WoW|r
 ## Title-zhCN: |cffabd473Turtle-WoW|r Big Wigs
 ## Notes: Boss Mods with Timer bars.
 ## Notes-esES: Módulos para Jefes con barras temporizadoras.
@@ -246,6 +246,18 @@ Raids\KarazhanUpper\Rupturan.lua
 Raids\KarazhanUpper\Kruul.lua
 Raids\KarazhanUpper\Mephistroth.lua
 Raids\KarazhanUpper\KaraTrash.lua
+
+Raids\TMH\TimbermawTrash.lua
+Raids\TMH\Karrsh.lua
+Raids\TMH\Rotgrowl.lua
+Raids\TMH\Loktanag.lua
+Raids\TMH\Ormanos.lua
+Raids\TMH\Trioch.lua
+Raids\TMH\Partath.lua
+Raids\TMH\Kronn.lua
+Raids\TMH\Selenaxx.lua
+Raids\TMH\Ursol.lua
+Raids\TMH\Perotharn.lua
 
 Battlegrounds\AlteracValley.lua
 Battlegrounds\ArathiBasin.lua

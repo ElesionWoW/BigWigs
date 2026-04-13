@@ -1,5 +1,5 @@
 # BigWigs Golden Edition
-Big updates to K40, BWL, and MC (**check your boss settings!**), small fixes and updates here and there. Mostly tested.
+Big updates to K40, TH, BWL, and MC (**check your boss settings!**), small fixes and updates here and there. Mostly tested.
 
 Updates are summarized in the [changelog](https://github.com/ElesionWoW/BigWigs/blob/master/documentation/changelog.txt). Details are in individual commits.
 ## Karazhan 40 - Highlights
@@ -12,6 +12,15 @@ Updates are summarized in the [changelog](https://github.com/ElesionWoW/BigWigs/
 * Sanv - bar for add phase duration, warn about last Curse before Feedback
 * Rupturan - Boulder target warnings, P1 kill window, alert when you stand in fire, monitoring of Felheart mana, Fragment health bars
 * Mephistroth - Doom bar, purge alert, better Shards handling, sound cue on Shackle fade
+## Timbermaw Hold - Highlights
+* Peroth'arn (80% complete) - Dirk of the Beast, Disarm, Flames of Purgation (including fear), Satyr Curse, Nightmare Burst, Spiral of Hellfire (missing add phase timer, shield tracking)
+* Rotgrowl (complete) - Fire-Soaked Arrow, Volley of Arrows, Fearful Roar (aoe fear), Rage of the Ursa (frenzy), Kill Command, Revive Pet
+* Ormanos (complete) - Rampaging Earth (charge), Crush Earth (floor zone), Attune to Earth (immunity/vulnerability)
+* Loktanag (complete) - Infected Secretion alerts and timers
+* Trash (complete) - Defiler, Pathfinder, Shaman, Ursa; Corruption of Loktanag, Son of Ursol, Foulheart Trickster
+* Selenaxx (work in progress) - Rain of Destruction
+* Karrsh / Partath / Kronn (pending rework) - ported over MarcelineVQ's modules from the Pepo fork for now
+* Ursol / Trioch (not yet started)
 ## Other Feature Highlights
 * Announcing bars to /raid now requires a Shift-click to prevent accidental spam.
 * BWL - new Ezzel Darkbrewer module; new Alchemist's Fire module; updates and 1.18.1 fixes for Firemaw, Nefarian, Razorgore, Ebonroc, Flamegor, Broodlord Lashlayer
@@ -125,9 +134,9 @@ Kruul is unchanged for now.
 ## Internal Changes
 Check out the documentation subfolder for further information on many features.
 * Full support for forking.
-* New helper functions added to Core: BuffNameByIndex(), GetUnitIdByName(), GetTargetByName(), GetGUIDByName(), OffsetGUID(), RaidTargetLookup(), FormatLargeNumber(), BuffIsPresent(), DebuffIsPresent(), AuraIsPresent(), GetCastTimeCoefficient(), GetHealthPercent().
+* New helper functions added to Core: BuffNameByIndex(), GetUnitIdByName(), GetTargetByName(), GetGUIDByName(), OffsetGUID(), RaidTargetLookup(), FormatLargeNumber(), BuffIsPresent(), DebuffIsPresent(), AuraIsPresent(), GetCastTimeCoefficient(), GetHealthPercent(), UpdateBar(), SetBar(), ColorBar().
 * Colors plugin provides raid target colors. Added ColorizeString().
-* Expanded Bars plugin to add emphasis toggle, streamlined OnClick handling, and a new dynamically updating MonitorBar (click to target mob).
+* Expanded Bars plugin to add emphasis toggle, streamlined OnClick handling, a new dynamically updating MonitorBar (click to target mob), and improved CounterBar.
 * Updated Babble-Zone and Babble-Boss libraries with TWoW custom names.
 ## Design Principles for Contributing
 * Avoid relying on client mods. - Where possible provide alternate triggers that don't require client mods (like SuperWoW).

@@ -440,6 +440,9 @@ function BigWigsBars:OnEnable()
 	self:RegisterEvent("BigWigs_HideAnchors")
 	self:RegisterEvent("BigWigs_StartBar")
 	self:RegisterEvent("BigWigs_StopBar")
+	self:RegisterEvent("BigWigs_UpdateBar")
+	self:RegisterEvent("BigWigs_SetBar")
+	self:RegisterEvent("BigWigs_ColorBar")
 	self:RegisterEvent("BigWigs_StartCounterBar")
 	self:RegisterEvent("BigWigs_StopCounterBar")
 	self:RegisterEvent("BigWigs_SetCounterBar")
@@ -748,25 +751,120 @@ function BigWigsBars:BigWigs_StopBar(module, text)
 	module:UnregisterCandyBar("BigWigsBar " .. text)
 end
 
+function BigWigsBars:BigWigs_UpdateBar(module, barName, value, text, paused)
+	if not barName then
+		return
+	end
+	local id = "BigWigsBar " .. barName
+	local bar = candybar.var.handlers[id]
+	if not bar then
+		return
+	end
+
+	-- adjust value
+	if type(value) == "number" and value < 0 and bar.time + value >= 0 then
+		bar.elapsed = math.abs(value)
+		candybar:Update(id)
+	elseif type(value) == "number" and value >= 0 and bar.time >= value then
+		bar.elapsed = bar.time - value
+		candybar:Update(id)
+	end
+
+	-- adjust display text
+	if text then
+		candybar:SetText(id, text)
+	end
+
+	-- adjust paused state (bar.paused is either nil or true)
+	if paused == true and not bar.paused then
+		module:PauseCandyBar(id)
+	elseif paused == false and bar.paused == true then
+		module:StartCandyBar(id)
+	end
+
+	-- adjust color
+	if color then
+		module:SetCandyBarColor(id, color)
+	end
+
+	-- adjust timer format
+	if timeFormat then
+		module:SetCandyBarTimeFormat(id, function(t)
+			return string.format(timeFormat, t)
+		end)
+	end
+end
+
+function BigWigsBars:BigWigs_SetBar(module, barName, timeLeft, timeTotal, timeFormat)
+	if not barName then
+		return
+	end
+	local id = "BigWigsBar " .. barName
+	local bar = candybar.var.handlers[id]
+	if not bar then
+		return
+	end
+
+	-- adjust total duration of bar
+	if timeTotal then
+		module:SetCandyBarTime(id, timeTotal)
+	end
+
+	-- adjust time left
+	if timeLeft then
+		module:SetCandyBarTimeLeft(id, timeLeft)
+	end
+
+	-- adjust timer format
+	if timeFormat then
+		module:SetCandyBarTimeFormat(id, function(t)
+			return string.format(timeFormat, t)
+		end)
+	end
+	
+	-- update in case the bar is paused so changes become visible
+	candybar:Update(id)
+end
+
+function BigWigsBars:BigWigs_ColorBar(module, barName, color, bgcolor)
+	if not barName then
+		return
+	end
+	local id = "BigWigsBar " .. barName
+	local bar = candybar.var.handlers[id]
+	if not bar then
+		return
+	end
+
+	-- adjust color
+	if color then
+		module:SetCandyBarColor(id, color)
+	end
+
+	-- adjust background color
+	if bgcolor then
+		module:SetCandyBarBackgroundColor(id, bgcolor)
+	end
+end
+
 function BigWigsBars:GetBarStatus(module, text)
 	local id = "BigWigsBar " .. text
 	local registered, time, elapsed, running = self:CandyBarStatus(id)
 	return registered, time, elapsed, running
 end
 
-local counterBarCache = {-- [i] = {text, module}
-}
-function BigWigsBars:BigWigs_StartCounterBar(module, text, max, icon, bar, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
+function BigWigsBars:BigWigs_StartCounterBar(module, text, max, icon, otherc, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, emphasize, target, spell, timeFormat)
 	if not text then
 		return
 	end
+	timeFormat = timeFormat or "%d"
 	local id = "BigWigsBar " .. text
-	BigWigsBars:BigWigs_StartBar(module, text, max, icon, bar, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
+	BigWigsBars:BigWigs_StartBar(module, text, max, icon, otherc, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, emphasize, target, spell)
 	module:PauseCandyBar(id)
 	module:SetCandyBarTimeFormat(id, function(t)
-		return string.format("%d", t)
+		return string.format(timeFormat, t)
 	end)
-	tinsert(counterBarCache, { text, module })
+	candybar:Update(id)
 end
 
 function BigWigsBars:BigWigs_StopCounterBar(module, text)
@@ -790,15 +888,6 @@ function BigWigsBars:BigWigs_SetCounterBar(module, text, value)
 	if bar.time <= value then
 		BigWigsBars:BigWigs_StopBar(module, text)
 	end
-end
-
-function BigWigsBars:BigWigs_HideCounterBars()
-	-- forces to hide all counter bars cached, used on bosskills
-	for i = 1, table.getn(counterBarCache) do
-		BigWigsBars:BigWigs_StopCounterBar(counterBarCache[i][2], counterBarCache[i][1])
-	end
-
-	counterBarCache = {}
 end
 
 function BigWigsBars:BigWigs_StartHPBar(module, text, max, icon, otherc, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)

@@ -2,6 +2,22 @@
 Changelog for BigWigs - Golden Edition
 --------------------------------------
 
+Timbermaw Update 1 - 2026-04-13 (Golden 30140)
+------------------
+(TH) Trash, Loktanag, Ormanos, Rotgrowl - new modules (complete)
+(TH) Selenaxx - new module (incomplete, Rain of Fire only)
+(TH) Peroth'arn - new module (mostly complete; missing shield tracking, CD timers)
+(BWL) Ezzel & Blackwing Alchemist - minor fixes
+(Sounds) Long.mp3 (the "positive" bell) - trimmed for snappier feedback and less channel clogging
+(Core) & (Bars) - improvements to CounterBar, new bar utility functions
+(Lib) Babble-Boss - added new Timbermaw Hold bosses
+
+(TH) Karrsh, Partath, Kronn - new modules (by MarcelineVQ)
+(Naxx) KT - fix for death trigger (by MarcelineVQ)
+
+(Naxx) Maexxna - hotfix for concat error
+
+
 BWL Update 2 - 2026-04-02 (Golden 30139)
 ------------
 (BWL) Razorgore - remove all egg and orb bars on phase transition

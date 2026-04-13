@@ -73,6 +73,7 @@ L:RegisterTranslations("enUS", function()
 		["Emerald Sanctum"] = "EmeraldSanctum",
 		["Lower Karazhan Halls"] = "Karazhan10",
 		["Tower of Karazhan"] = "Karazhan40",
+		["Timbermaw Hold"] = "TimbermawHold",
 		["Dire Maul"] = "DireMaul",
 		["Blackrock Spire"] = "BlackrockSpire",
 		["The Black Morass"] = "BlackMorass",
@@ -442,7 +443,6 @@ function BigWigs.modulePrototype:Disengage()
 		self:RemoveIcon()
 		self:RemoveWarningSign("", true)
 		BigWigsBars:Disable(self)
-		BigWigsBars:BigWigs_HideCounterBars()
 
 		self:RemoveProximity()
 
@@ -942,6 +942,23 @@ function BigWigs.modulePrototype:DelayedMonitorBar(delay, barName, icon, guid, t
 	return self:ScheduleEvent(delayPrefix .. "Bar" .. self:ToString() .. barName, "BigWigs_StartMonitorBar", delay, self, barName, "Interface\\Icons\\" .. icon, guid, type, displayText, insertMark, emphazise, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
 end
 
+function BigWigs.modulePrototype:CounterBar(barName, max, icon, target, spell, emphasize, timeFormat, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
+	if emphasize == nil then emphasize = false end
+	self:TriggerEvent("BigWigs_StartCounterBar", self, barName, max, "Interface\\Icons\\" .. icon, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, emphasize, target, spell, timeFormat)
+end
+function BigWigs.modulePrototype:DelayedCounterBar(delay, barName, max, icon, target, spell, emphasize, timeFormat, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
+	return self:ScheduleEvent(delayPrefix .. "Bar" .. self:ToString() .. barName, "BigWigs_StartCounterBar", delay, self, barName, max, "Interface\\Icons\\" .. icon, otherColor, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, emphasize, target, spell, timeFormat)
+end
+
+function BigWigs.modulePrototype:UpdateBar(barName, value, displayText, paused)
+	self:TriggerEvent("BigWigs_UpdateBar", self, barName, value, displayText, paused)
+end
+function BigWigs.modulePrototype:SetBar(barName, timeLeft, timeTotal, timeFormat)
+	self:TriggerEvent("BigWigs_SetBar", self, barName, timeLeft, timeTotal, timeFormat)
+end
+function BigWigs.modulePrototype:ColorBar(barName, color, bgcolor)
+	self:TriggerEvent("BigWigs_ColorBar", self, barName, color, bgcolor)
+end
 function BigWigs.modulePrototype:BarStatus(text)
 	local registered, time, elapsed, running = BigWigsBars:GetBarStatus(self, text)
 	return registered, time, elapsed, running
@@ -1131,7 +1148,7 @@ function BigWigs:ModuleDeclaration(bossName, zoneName)
 
 
 	-- zone
-	local raidZones = { "Blackwing Lair", "Ruins of Ahn'Qiraj", "Ahn'Qiraj", "Molten Core", "Naxxramas", "Emerald Sanctum", "Zul'Gurub" }
+	local raidZones = { "Blackwing Lair", "Ruins of Ahn'Qiraj", "Ahn'Qiraj", "Molten Core", "Naxxramas", "Emerald Sanctum", "Zul'Gurub", "Timbermaw Hold" }
 	local isOutdoorraid = true
 	for i, value in ipairs(raidZones) do
 		if value == zoneName then

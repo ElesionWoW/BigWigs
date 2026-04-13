@@ -59,7 +59,7 @@ L:RegisterTranslations("enUS", function()
 		msg_chemicalRage = "Chemical Rage - 80% damage reduction until Ezzel hits a pillar",
 		bar_chemicalRage = "Damage Reduction active",
 
-		trigger_acid = "You are affliced by Acid Bomb",
+		trigger_acid = "You are afflicted by Acid Bomb",
 		trigger_acidTick = "You suffer (.+) damage from Ezzel Darkbrewer's Acid Bomb",
 		warn_acid = "ACID - MOVE",
 
@@ -192,7 +192,7 @@ function module:Charge(player)
 	end
 
 	if self.db.profile.chemicalRage then
-		self:Bar(L["bar_chemicalRage"], 600, icon.chemicalRage, true, "Cyan")
+		self:CounterBar(L["bar_chemicalRage"], 80, icon.chemicalRage, nil, nil, nil, "%d%%", true, "Cyan")
 		self:Message(L["msg_chemicalRage"], "Core", nil, false)
 	end
 end
@@ -225,7 +225,7 @@ function module:Test()
 	local events = {
 		-- Acid
 		{ time = 2, func = function()
-			local msg = "You are affliced by Acid Bomb"
+			local msg = "You are afflicted by Acid Bomb"
 			print("Test: " .. msg)
 			self:TriggerEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", msg)
 		end },

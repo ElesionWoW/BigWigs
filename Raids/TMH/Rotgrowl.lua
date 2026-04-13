@@ -42,12 +42,12 @@ L:RegisterTranslations("enUS", function()
 		arrowmark_desc = "Mark Fire-Soaked Arrow target with Triangle",
 
 		fear_cmd = "fear",
-		fear_name = "Fearful Roar alert",
-		fear_desc = "TODO",
+		fear_name = "Fearful Roar bar",
+		fear_desc = "Cast bar for Kodiak's aoe fear (Fearful Roar)",
 
 		frenzy_cmd = "frenzy",
 		frenzy_name = "Rage of the Ursa alert",
-		frenzy_desc = "TODO",
+		frenzy_desc = "Alert when Kodiak frenzies (Rage of the Ursa)",
 
 		killcommand_cmd = "killcommand",
 		killcommand_name = "Kill Command alert",
